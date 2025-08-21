@@ -58,7 +58,7 @@ A beautiful, modern document chat application that lets you have intelligent con
    pip install -r requirements.txt
    
    # Install Ollama and download model
-   ollama pull gemma2:2b
+   ollama pull gemma3:270m
    
    # Start the application
    streamlit run app.py
@@ -194,7 +194,7 @@ NoteBook AI/
 ```bash
 # Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull gemma2:2b
+ollama pull gemma3:270m
 ```
 
 **Model download fails**

@@ -3,7 +3,7 @@ UI styling and CSS management for SAVIN AI application.
 Provides centralized styling functions and CSS generation.
 """
 
-from ..config.settings import UIConfig
+from src.config.settings import UIConfig
 
 
 def get_base_styles() -> str:

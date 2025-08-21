@@ -4,13 +4,16 @@ Provides Wikipedia and DuckDuckGo search integration with error handling and res
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+import asyncio
+from typing import List, Dict, Any, Optional, Union
+import duckduckgo_search as ddgs
 import wikipedia
-from ddgs import DDGS
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
-from ..config.settings import SearchConfig
+from src.config.settings import SearchConfig
 from ..data.models import SearchResult
-from .exceptions import SearchError
+from ..core.exceptions import SearchError
 
 
 # Configure logging

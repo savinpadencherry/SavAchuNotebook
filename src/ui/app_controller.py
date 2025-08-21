@@ -7,7 +7,7 @@ import streamlit as st
 import logging
 from typing import Dict, Any, Optional
 
-from ..config.settings import AppConfig, UIConfig
+from src.config.settings import AppConfig, UIConfig
 from ..ui.components.welcome import create_welcome_screen
 from ..ui.components.chat import (
     create_chat_interface, create_input_bar, create_quick_prompts,
@@ -44,22 +44,24 @@ class ApplicationController:
         self._initialize_session_state()
     
     def _initialize_components(self):
-        """Initialize all application components"""
+        """Initialize core components (lazy load others)"""
         try:
-            # Data layer
+            # Data layer - initialize immediately
             self.database = create_database()
             self.chat_repo = create_chat_repository(self.database)
             self.message_repo = create_message_repository(self.database)
             self.document_repo = create_document_repository(self.database)
             self.vector_repo = create_vector_store_repository(self.database)
             
-            # Core processing
-            self.document_processor = create_document_processor()
-            self.ai_handler = create_ai_handler()
-            self.vector_manager = create_vector_store_manager()
-            self.web_search = create_web_search_manager()
+            # Lazy initialization flags
+            self._components_loaded = {
+                'document_processor': False,
+                'ai_handler': False,
+                'vector_manager': False,
+                'web_search': False
+            }
             
-            # UI components
+            # UI components - initialize immediately (lightweight)
             self.welcome_screen = create_welcome_screen()
             self.chat_interface = create_chat_interface()
             self.input_bar = create_input_bar()
@@ -68,12 +70,40 @@ class ApplicationController:
             self.chat_stats = create_chat_stats()
             self.message_formatter = create_message_formatter()
             
-            logger.info("All components initialized successfully")
+            logger.info("Core components initialized successfully")
             
         except Exception as e:
             logger.error(f"Component initialization failed: {e}")
             st.error(f"Application initialization failed: {e}")
             st.stop()
+    
+    def _get_document_processor(self):
+        """Lazy load document processor"""
+        if not self._components_loaded['document_processor']:
+            self.document_processor = create_document_processor()
+            self._components_loaded['document_processor'] = True
+        return self.document_processor
+    
+    def _get_ai_handler(self):
+        """Lazy load AI handler"""
+        if not self._components_loaded['ai_handler']:
+            self.ai_handler = create_ai_handler()
+            self._components_loaded['ai_handler'] = True
+        return self.ai_handler
+    
+    def _get_vector_manager(self):
+        """Lazy load vector manager"""
+        if not self._components_loaded['vector_manager']:
+            self.vector_manager = create_vector_store_manager()
+            self._components_loaded['vector_manager'] = True
+        return self.vector_manager
+    
+    def _get_web_search(self):
+        """Lazy load web search"""
+        if not self._components_loaded['web_search']:
+            self.web_search = create_web_search_manager()
+            self._components_loaded['web_search'] = True
+        return self.web_search
     
     def _initialize_session_state(self):
         """Initialize Streamlit session state variables"""
@@ -310,7 +340,7 @@ class ApplicationController:
             vector_data = self.vector_repo.load_vector_store(chat_id)
             if vector_data:
                 st.session_state.vectorstore = vector_data[0]  # Vector store object
-                st.session_state.conversation = self.ai_handler.create_conversation_chain(st.session_state.vectorstore)
+                st.session_state.conversation = self._get_ai_handler().create_conversation_chain(st.session_state.vectorstore)
             else:
                 st.session_state.vectorstore = None
                 st.session_state.conversation = None

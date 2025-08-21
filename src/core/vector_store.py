@@ -1,7 +1,17 @@
 """
 Vector store management for SAVIN AI application.
-Handles vector embeddings, storage, and retrieval operations.
+Handles document embedding, vector storage, and similarity search.
 """
+
+import logging
+from typing import List, Dict, Any, Optional
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.schema import Document
+import pickle
+import os
+
+from src.config.settings import AIConfig
 
 import tempfile
 import os
@@ -12,6 +22,7 @@ from langchain_community.vectorstores import Chroma
 
 from ..config.settings import AIConfig
 from .exceptions import VectorStoreError
+from ..utils.performance import get_cached_embeddings_model
 
 
 # Configure logging
@@ -26,10 +37,21 @@ class VectorStoreManager:
     
     def __init__(self):
         self.config = AIConfig()
-        self.embeddings = self._create_embeddings()
+        self.embeddings = self._get_cached_embeddings()
+    
+    def _get_cached_embeddings(self) -> HuggingFaceEmbeddings:
+        """Get cached embeddings model for better performance"""
+        try:
+            # Use cached embeddings model
+            cached_embeddings = get_cached_embeddings_model()
+            logger.info("Using cached embeddings model")
+            return cached_embeddings
+        except Exception as e:
+            logger.warning(f"Failed to get cached embeddings, creating new instance: {e}")
+            return self._create_embeddings()
     
     def _create_embeddings(self) -> HuggingFaceEmbeddings:
-        """Create optimized HuggingFace embeddings model"""
+        """Create optimized HuggingFace embeddings model (fallback)"""
         try:
             embeddings = HuggingFaceEmbeddings(
                 model_name="sentence-transformers/all-MiniLM-L6-v2",

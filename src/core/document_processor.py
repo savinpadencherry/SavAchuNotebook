@@ -1,7 +1,19 @@
 """
-Document processing utilities for SAVIN AI application.
-Handles text extraction, chunking, and preprocessing from various document formats.
+Document processing for SAVIN AI application.
+Handles text extraction, chunking, and preprocessing from various file formats.
 """
+
+import logging
+import io
+from typing import List, Dict, Any, Optional, Union, BinaryIO
+import pypdf as PyPDF2
+import docx
+import tempfile
+import os
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema import Document
+
+from src.config.settings import AIConfig, FileConfig
 
 import io
 import logging

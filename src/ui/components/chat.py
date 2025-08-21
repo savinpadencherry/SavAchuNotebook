@@ -1,7 +1,14 @@
 """
-Chat interface components for SAVIN AI application.
-Handles chat display, message rendering, and user interactions.
+Chat interface components for SAVIN AI.
+Provides UI components for chat display, message formatting, and input handling.
 """
+
+import streamlit as st
+import logging
+from typing import Dict, List, Any, Optional
+import time
+
+from src.config.settings import UIConfig, MessageConfig
 
 import streamlit as st
 from typing import List, Dict, Any, Optional, Callable

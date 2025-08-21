@@ -1,7 +1,20 @@
 """
-Database operations for SAVIN AI application.
-Handles SQLite database operations with proper error handling and connection management.
+Database management for SAVIN AI application.
+Handles SQLite database operations, chat storage, and data persistence.
 """
+
+import sqlite3
+import logging
+import json
+import os
+import threading
+from contextlib import contextmanager
+from typing import Dict, List, Any, Optional, Tuple
+import pickle
+import time
+from datetime import datetime, timedelta
+
+from src.config.settings import DatabaseConfig
 
 import sqlite3
 import json

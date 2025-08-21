@@ -2,17 +2,21 @@
 AI and language model handling for SAVIN AI application.
 Manages LLM interactions, conversation chains, and response generation.
 """
-
-import time
 import logging
+import time
 from typing import Dict, Any, Optional, List, Tuple
 from langchain_community.llms import Ollama
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain.schema import Document
 
+from src.config.settings import AIConfig
+from .exceptions import AIProcessingError
+from langchain.schema import Document
+
 from ..config.settings import AIConfig
 from .exceptions import AIProcessingError
+from ..utils.performance import get_cached_llm_model
 
 
 # Configure logging
@@ -27,11 +31,22 @@ class AIHandler:
     
     def __init__(self):
         self.config = AIConfig()
-        self.llm = self._initialize_llm()
+        self.llm = self._get_cached_llm()
         self.conversation_template = self._create_conversation_template()
     
+    def _get_cached_llm(self) -> Ollama:
+        """Get cached LLM instance for better performance"""
+        try:
+            # Use cached LLM model
+            cached_llm = get_cached_llm_model()
+            logger.info(f"Using cached LLM with model: {self.config.AI_MODEL}")
+            return cached_llm
+        except Exception as e:
+            logger.warning(f"Failed to get cached LLM, creating new instance: {e}")
+            return self._initialize_llm()
+    
     def _initialize_llm(self) -> Ollama:
-        """Initialize and configure the LLM"""
+        """Initialize and configure the LLM (fallback)"""
         try:
             llm = Ollama(
                 model=self.config.AI_MODEL,

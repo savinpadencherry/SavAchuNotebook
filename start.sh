@@ -43,7 +43,7 @@ if ! command -v ollama &> /dev/null; then
     echo "   Or run: curl -fsSL https://ollama.ai/install.sh | sh"
     echo ""
     echo "After installing Ollama, run:"
-    echo "   ollama pull gemma2:2b"
+    echo "   ollama pull gemma3:270m"
     echo ""
     read -p "Press Enter to continue when Ollama is ready..."
 fi
@@ -52,7 +52,7 @@ fi
 echo "🤖 Checking if AI model is available..."
 if ! ollama list | grep -q "gemma"; then
     echo "📥 Downloading AI model (this may take a few minutes)..."
-    ollama pull gemma2:2b
+    ollama pull gemma3:270m
 fi
 
 echo "✅ Setup complete!"

@@ -51,7 +51,7 @@ class AIConfig:
     """AI and model configuration"""
     
     # LLM settings
-    AI_MODEL = "gemma2:2b"
+    AI_MODEL = "gemma3:270m"
     AI_TEMPERATURE = 0.1
     AI_MAX_TOKENS = 300
     

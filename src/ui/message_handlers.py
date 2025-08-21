@@ -35,15 +35,15 @@ class MessageHandlers:
             with st.status("🚀 Processing your document...", expanded=True) as status:
                 # Extract text
                 st.write("📖 Reading document content...")
-                text, file_type = self.app.document_processor.extract_text(uploaded_file)
+                text, file_type = self.app._get_document_processor().extract_text(uploaded_file)
                 
                 # Create chunks
                 st.write("✂️ Breaking into smart chunks...")
-                chunks = self.app.document_processor.create_chunks(text)
+                chunks = self.app._get_document_processor().create_chunks(text)
                 
                 # Create vector store
                 st.write("🧠 Creating knowledge vectors...")
-                vector_store = self.app.vector_manager.create_vector_store(chunks)
+                vector_store = self.app._get_vector_manager().create_vector_store(chunks)
                 
                 # Save to database
                 st.write("💾 Saving to database...")
@@ -67,7 +67,7 @@ class MessageHandlers:
                 
                 # Update session state
                 st.session_state.vectorstore = vector_store
-                st.session_state.conversation = self.app.ai_handler.create_conversation_chain(vector_store)
+                st.session_state.conversation = self.app._get_ai_handler().create_conversation_chain(vector_store)
                 
                 # Update chat title
                 doc_name = uploaded_file.name.split('.')[0]
@@ -104,7 +104,7 @@ class MessageHandlers:
             if has_document and st.session_state.conversation:
                 # Generate AI response using document
                 with st.spinner("🧠 Analyzing your document..."):
-                    answer, source_docs = self.app.ai_handler.generate_response(st.session_state.conversation, user_input)
+                    answer, source_docs = self.app._get_ai_handler().generate_response(st.session_state.conversation, user_input)
                     
                     # Store context
                     if source_docs:
@@ -141,7 +141,7 @@ Just click one of the search buttons next to the text field and I'll help you fi
             self._add_message("user", search_msg)
             
             with st.spinner("📖 Searching Wikipedia..."):
-                results = self.app.web_search.search_wikipedia(query, max_results=3)
+                results = self.app._get_web_search().search_wikipedia(query, max_results=3)
                 
                 if results:
                     # Format results for display
@@ -193,7 +193,7 @@ Just click one of the search buttons next to the text field and I'll help you fi
             self._add_message("user", search_msg)
             
             with st.spinner("🌐 Searching the web..."):
-                results = self.app.web_search.search_duckduckgo(query, max_results=3)
+                results = self.app._get_web_search().search_duckduckgo(query, max_results=3)
                 
                 if results:
                     # Format results for display
