@@ -102,73 +102,131 @@ class ChatInterface:
 
 class InputBar:
     """
-    Chat input bar component with integrated search and send functionality.
+    Enhanced chat input bar component with integrated navbar functionality.
+    
+    This component acts as a clean navbar housing:
+    - Text input field for user queries
+    - Wikipedia search button
+    - DuckDuckGo web search button  
+    - Quick prompts dropdown
+    - Send button
+    
+    The design follows modern UI principles for a crisp, clean appearance.
     """
     
     def __init__(self):
         self.config = UIConfig()
+        self.message_config = MessageConfig()
     
     def render(self, placeholder: str = None, disabled: bool = False, 
-               key_prefix: str = "chat") -> Dict[str, Any]:
+               key_prefix: str = "chat", show_quick_prompts: bool = True) -> Dict[str, Any]:
         """
-        Render the input bar with search and send buttons.
+        Render the enhanced navbar-style input bar with all integrated components.
         
         Args:
             placeholder: Input placeholder text
             disabled: Whether input is disabled
             key_prefix: Unique key prefix for components
+            show_quick_prompts: Whether to show quick prompts dropdown
             
         Returns:
             Dictionary with user input and button states
         """
-        # Default placeholder
+        # Default placeholder with context-aware messaging
         if placeholder is None:
-            placeholder = "💭 Ask about your document or search the web..."
+            placeholder = "💭 Ask about your document, search the web, or try a quick prompt..."
         
-        # Create columns for integrated layout
-        input_col1, input_col2, input_col3, input_col4 = st.columns([6, 0.8, 0.8, 1.2], gap="small")
+        # Enhanced navbar layout with better proportions
+        st.markdown("### 🗣️ Chat Input Navbar")
+        st.markdown("---")
+        
+        # Quick prompts section (above the main input)
+        selected_prompt = None
+        if show_quick_prompts:
+            st.markdown("**🚀 Quick Prompts:**")
+            prompt_cols = st.columns(len(self.message_config.SUGGESTED_PROMPTS[:4]))  # Show first 4 prompts
+            
+            for i, (col, prompt) in enumerate(zip(prompt_cols, self.message_config.SUGGESTED_PROMPTS[:4])):
+                with col:
+                    if st.button(
+                        f"✨ {prompt}", 
+                        key=f"{key_prefix}_quick_prompt_{i}",
+                        help=f"Click to use: {prompt}",
+                        type="secondary",
+                        use_container_width=True
+                    ):
+                        selected_prompt = prompt
+            
+            st.markdown("---")
+        
+        # Main input navbar with clean layout
+        input_col1, input_col2, input_col3, input_col4, input_col5 = st.columns([5, 1, 1, 1, 1.2], gap="small")
         
         result = {
             "user_input": "",
             "send_clicked": False,
             "wiki_clicked": False,
-            "web_clicked": False
+            "web_clicked": False,
+            "selected_prompt": selected_prompt
         }
         
         with input_col1:
+            # Enhanced text input with better styling
             result["user_input"] = st.text_input(
                 "chat_input", 
                 placeholder=placeholder,
                 label_visibility="collapsed",
                 key=f"{key_prefix}_input",
-                disabled=disabled
+                disabled=disabled,
+                help="Type your question or use the buttons for web search"
             )
         
         with input_col2:
+            # Wikipedia search with enhanced styling
             result["wiki_clicked"] = st.button(
                 "📖", 
-                help="Search Wikipedia", 
+                help="🔍 Search Wikipedia for factual information", 
                 key=f"{key_prefix}_wiki", 
                 use_container_width=True,
                 type="secondary"
             )
         
         with input_col3:
+            # DuckDuckGo web search with enhanced styling  
             result["web_clicked"] = st.button(
                 "🌐", 
-                help="Search DuckDuckGo", 
+                help="🌍 Search the web with DuckDuckGo", 
                 key=f"{key_prefix}_web", 
                 use_container_width=True,
                 type="secondary"
             )
-        
+            
         with input_col4:
+            # Additional quick action button
+            result["clear_clicked"] = st.button(
+                "🧹",
+                help="Clear the input field",
+                key=f"{key_prefix}_clear",
+                use_container_width=True,
+                type="secondary"
+            )
+        
+        with input_col5:
+            # Enhanced send button
             result["send_clicked"] = st.button(
                 "Send ➤", 
                 type="primary", 
                 key=f"{key_prefix}_send", 
-                use_container_width=True
+                use_container_width=True,
+                help="Send your message or search query"
             )
+        
+        # If a quick prompt was selected, populate the input
+        if selected_prompt:
+            result["user_input"] = selected_prompt
+        
+        # Add a visual separator
+        st.markdown("---")
         
         return result
 
@@ -408,39 +466,3 @@ I'm excited to help you explore your document! 😊🚀"""
 • Restart the application if problems persist 🔄
 
 🤗 **Don't worry!** I'm still here to help you. Let's try again! 💪"""
-
-
-# Factory functions
-def create_chat_interface() -> ChatInterface:
-    """Create a new chat interface instance"""
-    return ChatInterface()
-
-
-def create_input_bar() -> InputBar:
-    """Create a new input bar instance"""
-    return InputBar()
-
-
-def create_quick_prompts() -> QuickPrompts:
-    """Create a new quick prompts instance"""
-    return QuickPrompts()
-
-
-def create_document_upload_widget() -> DocumentUploadWidget:
-    """Create a new document upload widget instance"""
-    return DocumentUploadWidget()
-
-
-def create_chat_stats() -> ChatStats:
-    """Create a new chat stats instance"""
-    return ChatStats()
-
-
-def create_processing_status() -> ProcessingStatus:
-    """Create a new processing status instance"""
-    return ProcessingStatus()
-
-
-def create_message_formatter() -> MessageFormatter:
-    """Create a new message formatter instance"""
-    return MessageFormatter()
