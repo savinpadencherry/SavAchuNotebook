@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 
 from src.config.settings import AppConfig, UIConfig
 from ..ui.components.welcome import create_welcome_screen
-from ..ui.components.chat import (
+from ..ui.components.factories import (
     create_chat_interface, create_input_bar, create_quick_prompts,
     create_document_upload_widget, create_chat_stats, create_message_formatter
 )

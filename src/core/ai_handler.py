@@ -25,28 +25,91 @@ logger = logging.getLogger(__name__)
 
 class AIHandler:
     """
-    Handles AI model interactions and response generation.
-    Manages conversation chains and provides consistent AI responses.
+    Handles AI model interactions and response generation for SAVIN AI.
+    
+    This class manages all interactions with the Large Language Model (LLM)
+    and provides a clean interface for:
+    
+    - Document-based question answering
+    - Conversation chain management  
+    - Response generation and formatting
+    - AI model initialization and caching
+    - Error handling and fallback mechanisms
+    
+    The class uses Ollama as the LLM provider with configurable models
+    and supports both local and cached model instances for performance.
+    
+    Key Features:
+    - Cached LLM instances for better performance
+    - Conversation templates for consistent responses
+    - Document retrieval integration
+    - Comprehensive error handling
+    - Logging for debugging and monitoring
     """
     
     def __init__(self):
+        """
+        Initialize the AI handler with configuration and model setup.
+        
+        Sets up:
+        - Configuration from settings
+        - Cached or new LLM instance
+        - Conversation templates for responses
+        """
+        logger.info("🤖 Initializing AI Handler...")
+        
+        # Load configuration settings for AI operations
         self.config = AIConfig()
+        
+        # Get cached LLM instance for better performance
+        # This avoids re-initializing the model on every request
         self.llm = self._get_cached_llm()
+        
+        # Create conversation template for consistent AI responses
         self.conversation_template = self._create_conversation_template()
+        
+        logger.info("✅ AI Handler initialized successfully")
     
     def _get_cached_llm(self) -> Ollama:
-        """Get cached LLM instance for better performance"""
+        """
+        Get cached LLM instance for improved performance.
+        
+        This method attempts to retrieve a cached LLM instance first,
+        which significantly improves response times. If caching fails,
+        it falls back to creating a new instance.
+        
+        Returns:
+            Ollama: Configured LLM instance ready for use
+            
+        Raises:
+            AIProcessingError: If LLM initialization fails completely
+        """
         try:
-            # Use cached LLM model
+            logger.info("📦 Attempting to retrieve cached LLM...")
+            
+            # Use cached LLM model for better performance
             cached_llm = get_cached_llm_model()
-            logger.info(f"Using cached LLM with model: {self.config.AI_MODEL}")
+            logger.info(f"✅ Using cached LLM with model: {self.config.AI_MODEL}")
             return cached_llm
+            
         except Exception as e:
-            logger.warning(f"Failed to get cached LLM, creating new instance: {e}")
+            logger.warning(f"⚠️ Failed to get cached LLM, creating new instance: {e}")
             return self._initialize_llm()
     
     def _initialize_llm(self) -> Ollama:
-        """Initialize and configure the LLM (fallback)"""
+        """
+        Initialize and configure a new LLM instance (fallback method).
+        
+        This method creates a fresh LLM instance when caching fails.
+        It includes proper configuration, timeout settings, and error
+        handling to ensure reliable AI model initialization.
+        
+        Returns:
+            Ollama: Newly initialized LLM instance
+            
+        Raises:
+            AIProcessingError: If LLM initialization fails
+        """
         try:
             llm = Ollama(
                 model=self.config.AI_MODEL,

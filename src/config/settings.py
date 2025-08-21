@@ -131,16 +131,46 @@ class CacheConfig:
 
 
 class MessageConfig:
-    """User messaging and prompts configuration"""
+    """
+    User messaging and prompts configuration.
     
-    # Quick prompts
+    This class manages all user-facing messaging including:
+    - Quick prompt suggestions for common queries
+    - Error messages with proper formatting
+    - Success messages and notifications
+    - Help text and tooltips
+    """
+    
+    # Enhanced quick prompts for better user experience
     SUGGESTED_PROMPTS = [
         "📝 Summarize this document",
-        "🔍 What are the key points?",
+        "🔍 What are the key points?", 
         "💡 Explain the main concepts",
         "❓ Generate questions about this content",
-        "🎯 Extract important insights"
+        "🎯 Extract important insights",
+        "📊 Create a table of contents",
+        "🔗 Find relationships between topics",
+        "⚡ Give me quick facts"
     ]
+    
+    # Contextual prompt suggestions based on content type
+    DOCUMENT_TYPE_PROMPTS = {
+        "academic": [
+            "📚 What is the research methodology?",
+            "🔬 What are the findings and conclusions?",
+            "📖 Explain the theoretical framework"
+        ],
+        "business": [
+            "💼 What are the business implications?", 
+            "📈 Summarize financial data",
+            "🎯 What are the strategic recommendations?"
+        ],
+        "technical": [
+            "⚙️ Explain the technical implementation",
+            "🛠️ What are the requirements?",
+            "🔧 List the main components"
+        ]
+    }
     
     # Error messages
     ERROR_MESSAGES = {
