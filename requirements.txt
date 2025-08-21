@@ -1,0 +1,33 @@
+# Core web framework
+streamlit==1.28.1
+
+# Document processing
+pypdf==3.15.5
+python-docx==0.8.11
+
+# LangChain ecosystem
+langchain==0.0.329
+langchain-community==0.0.1
+
+# Vector storage and embeddings
+faiss-cpu==1.7.4
+sentence-transformers==2.2.2
+
+# AI/LLM support
+ollama==0.1.7
+
+# Web search functionality
+wikipedia==1.4.0
+duckduckgo-search==3.9.6
+
+# Caching and performance (REQUIREMENT 5)
+redis==5.0.1
+
+# Additional utilities
+requests==2.31.0
+python-json-logger==2.0.7
+duckduckgo-search==8.1.1
+
+# Utilities
+numpy==1.24.3
+pandas==2.1.1
