@@ -1,20 +1,11 @@
-"""
-Chat interface components for SAVIN AI.
-Provides UI components for chat display, message formatting, and input handling.
-"""
+"""Chat interface components for SAVIN AI."""
+
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
 import streamlit as st
-import logging
-from typing import Dict, List, Any, Optional
-import time
 
 from src.config.settings import UIConfig, MessageConfig
-
-import streamlit as st
-from typing import List, Dict, Any, Optional, Callable
-from datetime import datetime
-
-from ...config.settings import UIConfig, MessageConfig
 
 
 class ChatInterface:
@@ -24,7 +15,6 @@ class ChatInterface:
     
     def __init__(self):
         self.config = UIConfig()
-        self.message_config = MessageConfig()
     
     def render_chat_container(self, messages: List[Dict[str, Any]], height: Optional[int] = None):
         """
@@ -70,22 +60,14 @@ class ChatInterface:
     
     def _render_empty_chat(self):
         """Render empty chat state"""
-        st.markdown("""
-        <div style="
-            text-align: center; 
-            padding: 3rem 1rem; 
-            color: rgba(255,255,255,0.6);
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        ">
-            <h3 style="margin-bottom: 1rem; color: rgba(255,255,255,0.8);">👋 Hi there!</h3>
-            <p style="margin: 0.5rem 0;">I'm your friendly AI assistant! 😊</p>
-            <p style="margin: 0;">Upload a document to start our intelligent conversation 🚀</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.7);">
+                <p>Upload a document or start typing to begin your chat.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     
     def _format_timestamp(self, timestamp) -> str:
         """Format timestamp for display"""
@@ -105,69 +87,41 @@ class InputBar:
     Enhanced chat input bar component with integrated navbar functionality.
     
     This component acts as a clean navbar housing:
-    - Text input field for user queries
-    - Wikipedia search button
-    - DuckDuckGo web search button  
-    - Quick prompts dropdown
-    - Send button
+        - Text input field for user queries
+        - Wikipedia search button
+        - DuckDuckGo web search button
+        - Send button
     
     The design follows modern UI principles for a crisp, clean appearance.
     """
     
     def __init__(self):
         self.config = UIConfig()
-        self.message_config = MessageConfig()
     
-    def render(self, placeholder: str = None, disabled: bool = False, 
-               key_prefix: str = "chat", show_quick_prompts: bool = True) -> Dict[str, Any]:
+    def render(self, placeholder: str = None, disabled: bool = False,
+               key_prefix: str = "chat") -> Dict[str, Any]:
         """
-        Render the enhanced navbar-style input bar with all integrated components.
-        
+        Render the compact input bar with integrated actions.
+
         Args:
             placeholder: Input placeholder text
             disabled: Whether input is disabled
             key_prefix: Unique key prefix for components
-            show_quick_prompts: Whether to show quick prompts dropdown
-            
+
         Returns:
             Dictionary with user input and button states
         """
-        # Default placeholder with context-aware messaging
         if placeholder is None:
-            placeholder = "💭 Ask about your document, search the web, or try a quick prompt..."
-        
-        # Enhanced navbar layout with better proportions
-        st.markdown("### 🗣️ Chat Input Navbar")
-        st.markdown("---")
-        
-        # Quick prompts section (above the main input)
-        selected_prompt = None
-        if show_quick_prompts:
-            st.markdown("**🚀 Quick Prompts:**")
-            prompt_cols = st.columns(len(self.message_config.SUGGESTED_PROMPTS[:4]))  # Show first 4 prompts
-            
-            for i, (col, prompt) in enumerate(zip(prompt_cols, self.message_config.SUGGESTED_PROMPTS[:4])):
-                with col:
-                    if st.button(
-                        f"✨ {prompt}", 
-                        key=f"{key_prefix}_quick_prompt_{i}",
-                        help=f"Click to use: {prompt}",
-                        type="secondary",
-                        use_container_width=True
-                    ):
-                        selected_prompt = prompt
-            
-            st.markdown("---")
-        
-        # Main input navbar with clean layout
+            placeholder = "💭 Ask about your document or search the web..."
+
         input_col1, input_col2, input_col3, input_col4, input_col5 = st.columns([5, 1, 1, 1, 1.2], gap="small")
-        
+
         result = {
             "user_input": "",
             "send_clicked": False,
             "wiki_clicked": False,
             "web_clicked": False,
-            "selected_prompt": selected_prompt
+            "clear_clicked": False,
         }
         
         with input_col1:
@@ -220,13 +174,6 @@ class InputBar:
                 use_container_width=True,
                 help="Send your message or search query"
             )
-        
-        # If a quick prompt was selected, populate the input
-        if selected_prompt:
-            result["user_input"] = selected_prompt
-        
-        # Add a visual separator
-        st.markdown("---")
         
         return result
 
