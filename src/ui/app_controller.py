@@ -10,9 +10,10 @@ from typing import Dict, Any, Optional
 from src.config.settings import AppConfig, UIConfig
 from ..ui.components.welcome import create_welcome_screen
 from ..ui.components.factories import (
-    create_chat_interface, create_input_bar, create_quick_prompts,
+    create_chat_interface, create_quick_prompts,
     create_document_upload_widget, create_chat_stats, create_message_formatter
 )
+from ..ui.styles.theme import get_input_styles
 from ..data.database import (
     create_database, create_chat_repository, create_message_repository,
     create_document_repository, create_vector_store_repository
@@ -22,6 +23,7 @@ from ..core.ai_handler import create_ai_handler
 from ..core.vector_store import create_vector_store_manager
 from ..utils.web_search import create_web_search_manager
 from ..core.exceptions import SAVINAIException
+from ..ui.message_handlers import create_message_handlers
 
 
 # Configure logging
@@ -64,11 +66,13 @@ class ApplicationController:
             # UI components - initialize immediately (lightweight)
             self.welcome_screen = create_welcome_screen()
             self.chat_interface = create_chat_interface()
-            self.input_bar = create_input_bar()
             self.quick_prompts = create_quick_prompts()
             self.document_widget = create_document_upload_widget()
             self.chat_stats = create_chat_stats()
             self.message_formatter = create_message_formatter()
+            
+            # Message handlers for processing actions
+            self.message_handlers = create_message_handlers(self)
             
             logger.info("Core components initialized successfully")
             
@@ -132,6 +136,11 @@ class ApplicationController:
                 self._render_chat_interface()
             else:
                 self._render_welcome_screen()
+            
+            # Always render bottom input bar (fixed at bottom)
+            if st.session_state.current_chat_id:
+                has_document = bool(st.session_state.get('vectorstore'))
+                self._render_bottom_input_bar(has_document)
                 
         except Exception as e:
             logger.error(f"Application error: {e}")
@@ -214,7 +223,7 @@ class ApplicationController:
     def _render_welcome_screen(self):
         """Render the welcome screen when no chat is selected"""
         self.welcome_screen.render()
-    
+
     def _render_chat_interface(self):
         """Render the main chat interface"""
         try:
@@ -280,56 +289,87 @@ class ApplicationController:
             st.error("Error loading chat interface")
     
     def _render_bottom_input_bar(self, has_document: bool):
-        """Render the bottom input bar with navigation"""
-        # Bottom navigation container
-        st.markdown('<div class="bottom-navbar">', unsafe_allow_html=True)
-        st.markdown('<div class="navbar-content">', unsafe_allow_html=True)
+        """
+        Render the unified floating navigation bar with integrated text field and buttons
+        """
+        # Apply the CSS styles for the floating navbar
+        css = get_input_styles()
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
         
-        # Quick prompt suggestions
-        st.markdown('<div class="prompt-suggestions">', unsafe_allow_html=True)
-        selected_suggestion = self.quick_prompts.render(
-            prompts=["📊 Summarize", "💡 Insights", "❓ Questions", "🔍 Analysis", "✨ Creative"],
-            key_prefix="bottom_quick"
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Create the main floating navbar container
+        st.markdown("""
+        <div class="bottom-navbar-container">
+            <div class="navbar-content-wrapper">
+        """, unsafe_allow_html=True)
         
-        # Input row
+        # Quick prompts section (integrated within the navbar)
+        if has_document:
+            st.markdown("**💡 Quick Actions**")
+            prompt_cols = st.columns(4, gap="small")
+            prompts = ["📝 Summarize", "🔍 Key Points", "💡 Concepts", "❓ Questions"]
+            
+            for i, prompt in enumerate(prompts):
+                with prompt_cols[i]:
+                    if st.button(prompt, key=f"quick_prompt_{i}", use_container_width=True, type="secondary"):
+                        prompt_text = {
+                            "📝 Summarize": "Please provide a comprehensive summary of this document",
+                            "🔍 Key Points": "What are the main key points and takeaways?",
+                            "💡 Concepts": "Explain the main concepts and ideas presented",
+                            "❓ Questions": "Generate 5 thoughtful questions based on this content"
+                        }
+                        self.message_handlers.process_user_message(prompt_text[prompt], has_document)
+                        st.rerun()
+        
+        # Main unified input container
         st.markdown('<div class="input-row-container">', unsafe_allow_html=True)
         
-        # Get input and button states
-        placeholder = "💭 Ask about your document or search the web..." if has_document else "🚀 Upload a document or use search buttons..."
+        # Create columns for the integrated layout - text field takes most space
+        input_cols = st.columns([6, 1, 1, 1.2], gap="small")
         
-        input_result = self.input_bar.render(
-            placeholder=placeholder,
-            disabled=False,
-            key_prefix="main"
-        )
+        # Text input field (main component)
+        with input_cols[0]:
+            user_input = st.text_input(
+                "message_input",
+                placeholder="Ask me anything about your document..." if has_document else "Upload a document to start chatting, or search the web...",
+                label_visibility="collapsed",
+                key="unified_message_input"
+            )
         
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Wikipedia search button 
+        with input_cols[1]:
+            wiki_btn = st.button("📖", key="unified_wiki", help="Search Wikipedia", use_container_width=True)
         
-        # Process input
-        self._process_input(input_result, has_document, selected_suggestion)
-    
-    def _process_input(self, input_result: dict, has_document: bool, selected_suggestion: str = None):
-        """Process user input from various sources"""
-        user_input = input_result["user_input"] or selected_suggestion
+        # Web search button
+        with input_cols[2]:
+            web_btn = st.button("🌐", key="unified_web", help="Search Web", use_container_width=True)
         
-        if user_input and (input_result["send_clicked"] or input_result["wiki_clicked"] or input_result["web_clicked"] or selected_suggestion):
+        # Send button (primary action)
+        with input_cols[3]:
+            send_btn = st.button("Send ➤", key="unified_send", help="Send Message", use_container_width=True, type="primary")
+        
+        st.markdown('</div>', unsafe_allow_html=True)  # Close input-row-container
+        st.markdown("""
+            </div>
+        </div>
+        """, unsafe_allow_html=True)  # Close navbar containers
+        
+        # Process user input based on which action was triggered
+        if user_input and (send_btn or wiki_btn or web_btn):
             try:
-                if input_result["wiki_clicked"]:
-                    self._process_wikipedia_search(user_input)
-                elif input_result["web_clicked"]:
-                    self._process_web_search(user_input)
+                if wiki_btn:
+                    self.message_handlers.process_wikipedia_search(user_input)
+                elif web_btn:
+                    self.message_handlers.process_web_search(user_input)
                 else:
-                    self._process_user_message(user_input, has_document)
-                    
-            except Exception as e:
-                logger.error(f"Error processing input: {e}")
-                error_msg = self.message_formatter.format_error_message("Processing", str(e))
-                self._add_message("assistant", error_msg)
+                    self.message_handlers.process_user_message(user_input, has_document)
+                
+                # Clear input field after processing
+                st.session_state.unified_message_input = ""
                 st.rerun()
+            except Exception as e:
+                logger.error(f"Error processing user input: {e}")
+                st.error(f"Error processing your request: {str(e)}")
+
     
     def _load_chat(self, chat_id: str):
         """Load a specific chat"""
@@ -390,6 +430,13 @@ class ApplicationController:
                 content,
                 context
             )
+
+    # Lightweight wrappers to delegate actions to MessageHandlers
+    def _process_document_upload(self, uploaded_file):
+        return self.message_handlers.process_document_upload(uploaded_file)
+
+    def _clear_document(self):
+        return self.message_handlers.clear_document()
 
 
 # Factory function

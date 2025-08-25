@@ -182,100 +182,185 @@ def get_layout_styles() -> str:
 
 
 def get_input_styles() -> str:
-    """Get input and form-related CSS styles"""
+    """Get input and form-related CSS styles - Enhanced unified navbar design"""
     return """
-    /* Bottom Navigation Bar Container */
-    .bottom-navbar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: rgba(15, 15, 35, 0.95);
-        backdrop-filter: blur(30px);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 1rem 2rem 1.5rem 2rem;
-        z-index: 1000;
-        box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.3);
-    }
-    
-    .navbar-content {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    
-    /* Pre-defined prompts styling */
-    .prompt-suggestions {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    
-    .prompt-suggestions .stButton button {
-        background: rgba(255, 255, 255, 0.08) !important;
+    /* Fixed Bottom Navigation Container - Floating Design */
+    .bottom-navbar-container {
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 20px !important;
+        right: 20px !important;
+        z-index: 9999 !important;
+        
+        /* Modern glassmorphism floating card */
+        background: rgba(15, 15, 35, 0.9) !important;
+        backdrop-filter: blur(25px) saturate(200%) !important;
         border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        border-radius: 15px !important;
-        padding: 0.4rem 0.8rem !important;
-        color: rgba(255, 255, 255, 0.8) !important;
-        font-size: 0.8rem !important;
-        cursor: pointer !important;
-        transition: all 0.3s ease !important;
-        backdrop-filter: blur(10px) !important;
-        min-width: auto !important;
-        height: 35px !important;
-        font-weight: 400 !important;
+        border-radius: 20px !important;
+        
+        /* Enhanced floating shadow */
+        box-shadow: 
+            0 20px 60px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        
+        padding: 1.5rem !important;
+        pointer-events: auto !important;
+        
+        /* Smooth animation for appearance */
+        animation: slideUpFloat 0.6s ease-out !important;
     }
-    
-    .prompt-suggestions .stButton button:hover {
-        background: rgba(102, 126, 234, 0.2) !important;
-        border-color: rgba(102, 126, 234, 0.4) !important;
-        transform: translateY(-1px) !important;
-        color: white !important;
+
+    @keyframes slideUpFloat {
+        from {
+            opacity: 0;
+            transform: translateY(100px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
     }
-    
-    /* Input row container within navbar */
+
+    /* Content wrapper for better organization */
+    .navbar-content-wrapper {
+        max-width: 1000px !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+    }
+
+    /* Quick actions styling */
+    .bottom-navbar-container h3,
+    .bottom-navbar-container .markdown-text-container strong {
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-size: 0.9rem !important;
+        margin-bottom: 0.5rem !important;
+        text-align: center !important;
+    }
+
+    /* Main input container - unified design */
     .input-row-container {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 35px;
-        padding: 0.75rem;
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(20px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 15px !important;
+        padding: 0.3rem !important;
+        backdrop-filter: blur(10px) !important;
+        
+        /* Inner glow effect */
+        box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            0 4px 20px rgba(102, 126, 234, 0.15) !important;
     }
-    
-    /* Beautiful integrated text input */
-    .stTextInput input {
+
+    /* Text input styling - seamlessly integrated */
+    .bottom-navbar-container .stTextInput > div > div {
+        border: none !important;
+        background: transparent !important;
+        border-radius: 12px !important;
+    }
+
+    .bottom-navbar-container .stTextInput input {
         background: transparent !important;
         border: none !important;
-        border-radius: 25px !important;
         color: rgba(255, 255, 255, 0.95) !important;
-        padding: 1rem 1.5rem !important;
-        font-size: 1.1rem !important;
-        font-weight: 400 !important;
-        transition: all 0.3s ease !important;
-        height: 50px !important;
-        flex: 1 !important;
-    }
-    
-    .stTextInput input:focus {
+        padding: 0.75rem 1rem !important;
+        font-size: 1rem !important;
         outline: none !important;
-        color: white !important;
+        border-radius: 12px !important;
+        transition: all 0.3s ease !important;
     }
-    
-    .stTextInput input::placeholder {
-        color: rgba(255, 255, 255, 0.6) !important;
-        font-weight: 300 !important;
+
+    .bottom-navbar-container .stTextInput input::placeholder {
+        color: rgba(255, 255, 255, 0.5) !important;
         font-style: italic !important;
     }
-    
-    /* Remove default input container styling */
-    .stTextInput > div > div {
-        border: none !important;
-        background: none !important;
+
+    .bottom-navbar-container .stTextInput input:focus {
+        background: rgba(255, 255, 255, 0.05) !important;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    /* Action buttons - cohesive design within the container */
+    .bottom-navbar-container .stButton > button {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 12px !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+        height: 42px !important;
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+        backdrop-filter: blur(5px) !important;
+    }
+
+    .bottom-navbar-container .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.15) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    /* Primary send button - distinctive styling */
+    .bottom-navbar-container .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border: 1px solid rgba(102, 126, 234, 0.3) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .bottom-navbar-container .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+    }
+
+    /* Quick action buttons - secondary style */
+    .bottom-navbar-container .stButton > button[kind="secondary"] {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 0.85rem !important;
+        padding: 0.4rem 0.8rem !important;
+        border-radius: 8px !important;
+    }
+
+    .bottom-navbar-container .stButton > button[kind="secondary"]:hover {
+        background: rgba(102, 126, 234, 0.2) !important;
+        color: rgba(255, 255, 255, 0.95) !important;
+    }
+
+    /* Ensure main content doesn't hide behind the floating navbar */
+    .main .block-container {
+        padding-bottom: 160px !important;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .bottom-navbar-container {
+            bottom: 10px !important;
+            left: 10px !important;
+            right: 10px !important;
+            padding: 1rem !important;
+        }
+        
+        .input-row-container {
+            gap: 0.3rem !important;
+            padding: 0.2rem !important;
+        }
+        
+        .bottom-navbar-container .stTextInput input {
+            font-size: 0.9rem !important;
+            padding: 0.6rem 0.8rem !important;
+        }
+        
+        .bottom-navbar-container .stButton > button {
+            height: 38px !important;
+            font-size: 0.8rem !important;
+        }
     }
     """
 

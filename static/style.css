@@ -1,99 +1,20 @@
 /* static/style.css */
 
-/* Main container for the bottom navigation bar */
+/* Legacy styles - most styling now handled in bottom_nav.css */
+
+/* Fallback container styling (if needed) */
 .bottom-nav-container {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background: rgba(15, 15, 35, 0.85); /* Semi-transparent dark background */
-    backdrop-filter: blur(20px) saturate(150%); /* Frosted glass effect */
-    border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle top border */
-    padding: 1rem 2rem; /* Generous padding */
-    z-index: 1000; /* Ensure it's on top */
-    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.2); /* Soft shadow for depth */
+    background: rgba(15, 15, 35, 0.85);
+    backdrop-filter: blur(20px) saturate(150%);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem 2rem;
+    z-index: 999; /* Lower than bottom_nav.css */
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.2);
 }
 
-/* Quick prompts styling */
-.quick-prompts-container {
-    display: flex;
-    justify-content: center;
-    gap: 0.75rem; /* Space between buttons */
-    margin-bottom: 1rem; /* Space above the input bar */
-}
-
-/* Individual prompt button styling */
-.quick-prompts-container .stButton>button {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.8);
-    padding: 0.3rem 0.8rem;
-    border-radius: 16px; /* Pill-shaped buttons */
-    font-size: 0.8rem;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.quick-prompts-container .stButton>button:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.25);
-    transform: translateY(-2px); /* Slight lift on hover */
-}
-
-/* Main input bar container */
-.input-bar-container {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem; /* Space between input and buttons */
-}
-
-/* Text input styling */
-.input-bar-container .stTextInput {
-    flex-grow: 1; /* Take up available space */
-}
-
-.input-bar-container .stTextInput input {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px; /* Rounded corners */
-    color: white;
-    padding: 0.75rem 1.25rem; /* Comfortable padding */
-    font-size: 1rem;
-}
-
-.input-bar-container .stTextInput input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-/* Action buttons (Search, Send) styling */
-.input-bar-container .stButton>button {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    border-radius: 12px; /* Consistent rounding */
-    width: 48px; /* Square buttons */
-    height: 48px;
-    font-size: 1.5rem; /* Larger icons */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: all 0.3s ease;
-}
-
-.input-bar-container .stButton>button:hover {
-    background: rgba(102, 126, 234, 0.5); /* Highlight color on hover */
-    border-color: rgba(102, 126, 234, 0.8);
-    transform: scale(1.05);
-}
-
-/* Primary send button styling */
-.input-bar-container .stButton>button.st-emotion-cache-19rxjzo {
-    background: #667eea; /* Primary color */
-    border-color: #764ba2;
-}
-
-.input-bar-container .stButton>button.st-emotion-cache-19rxjzo:hover {
-    background: #764ba2;
-    box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
-}
+/* Note: Primary styling is now in bottom_nav.css for the floating design */
+/* This file kept for backwards compatibility */

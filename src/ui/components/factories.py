@@ -4,7 +4,7 @@ Provides centralized component instantiation for the SAVIN AI application.
 """
 
 from .chat import (
-    ChatInterface, InputBar, QuickPrompts, DocumentUploadWidget, 
+    ChatInterface, QuickPrompts, DocumentUploadWidget, 
     ChatStats, ProcessingStatus, MessageFormatter
 )
 
@@ -12,11 +12,6 @@ from .chat import (
 def create_chat_interface() -> ChatInterface:
     """Create a new chat interface instance"""
     return ChatInterface()
-
-
-def create_input_bar() -> InputBar:
-    """Create a new input bar instance"""
-    return InputBar()
 
 
 def create_quick_prompts() -> QuickPrompts:

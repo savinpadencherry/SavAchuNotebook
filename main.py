@@ -283,10 +283,5 @@ def main():
 
 if __name__ == "__main__":
     """
-    Application entry point when run directly.
-    
-    This is the standard Python idiom for making a script executable.
-    When main.py is run directly (not imported), this will execute
-    the main() function to start the application.
     """
     main()
