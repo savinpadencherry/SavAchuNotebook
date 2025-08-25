@@ -1,6 +1,6 @@
 """
 Message processing handlers for SAVIN AI application.
-Handles different types of user interactions and message processing.
+Handles different types of user interactions and message processing with enhanced RAG capabilities.
 """
 
 import streamlit as st
@@ -8,6 +8,7 @@ import logging
 from typing import Any
 
 from ..core.exceptions import SAVINAIException
+from ..core.rag_agent import create_rag_agent
 
 
 # Configure logging
@@ -23,6 +24,22 @@ class MessageHandlers:
     def __init__(self, app_controller):
         """Initialize with reference to main application controller"""
         self.app = app_controller
+        
+    def _initialize_rag_agent(self):
+        """Initialize the enhanced RAG agent with available components."""
+        try:
+            vector_store = st.session_state.get('conversation')
+            web_search_manager = self.app._get_web_search() if hasattr(self.app, '_get_web_search') else None
+            
+            self.rag_agent = create_rag_agent(
+                vector_store=vector_store,
+                web_search_manager=web_search_manager
+            )
+            logger.info("Enhanced RAG agent initialized successfully")
+            
+        except Exception as e:
+            logger.warning(f"Failed to initialize RAG agent: {e}")
+            self.rag_agent = None
     
     def process_document_upload(self, uploaded_file):
         """Process uploaded document"""
@@ -96,111 +113,299 @@ class MessageHandlers:
             st.rerun()
     
     def process_user_message(self, user_input: str, has_document: bool):
-        """Process regular user message"""
+        """Process regular user message with enhanced RAG capabilities"""
         try:
             # Add user message
             self._add_message("user", user_input)
             
             if has_document and st.session_state.conversation:
-                # Generate AI response using document
-                with st.spinner("🧠 Analyzing your document..."):
-                    answer, source_docs = self.app._get_ai_handler().generate_response(st.session_state.conversation, user_input)
-                    
-                    # Store context
-                    if source_docs:
-                        st.session_state.relevant_context = "\n\n".join([doc.page_content for doc in source_docs[:2]])
-                    
-                    self._add_message("assistant", answer, st.session_state.relevant_context)
+                # Enhanced RAG response combining document + web search
+                with st.spinner("🧠 Analyzing content and searching for additional context..."):
+                    if self.rag_agent:
+                        # Use enhanced RAG for comprehensive response
+                        response = self.rag_agent.generate_enhanced_rag_response(user_input, has_document=True)
+                        self._add_message("assistant", response)
+                    else:
+                        # Fallback to basic document analysis
+                        answer, source_docs = self.app._get_ai_handler().generate_response(st.session_state.conversation, user_input)
+                        
+                        # Store context
+                        if source_docs:
+                            st.session_state.relevant_context = "\n\n".join([doc.page_content for doc in source_docs[:2]])
+                        
+                        self._add_message("assistant", answer, st.session_state.relevant_context)
             else:
-                # No document - provide guidance
-                guidance_msg = f"""🤗 **Hi there!** I'd love to help you with: "{user_input}"
+                # No document - offer intelligent web search
+                with st.spinner("🤔 Let me search for information to help you..."):
+                    if self.rag_agent:
+                        # Use RAG agent to provide web-based response
+                        response = self.rag_agent.generate_enhanced_rag_response(user_input, has_document=False)
+                        self._add_message("assistant", response)
+                    else:
+                        # Provide guidance with helpful suggestions
+                        guidance_msg = f"""🤗 **Great question!** "{user_input}"
 
-Since you haven't uploaded a document yet, here's how I can assist:
+Since you haven't uploaded a document yet, here are the best ways I can help:
 
-• **📤 Upload a document** → I'll analyze it and give you detailed, context-aware answers
-• **📖 Use Wikipedia search** → Click the 📖 button to search Wikipedia 
-• **🌐 Use web search** → Click the 🌐 button to search the internet with DuckDuckGo
+🔍 **Smart Search Options:**
+• **Click 🔍 Wiki** → I'll search Wikipedia and provide detailed analysis
+• **Click 🌐 Web** → I'll search the internet and synthesize findings  
 
-Just click one of the search buttons next to the text field and I'll help you find the information you need! 😊✨"""
-                
-                self._add_message("assistant", guidance_msg)
+📄 **For Advanced Analysis:**
+• **Upload a document** → I'll combine your content with web research for comprehensive insights
+
+💡 **Quick Tip:** Try using the search buttons - they're powered by advanced AI to give you detailed, well-structured answers!
+
+Ready to explore? Just click one of the search buttons! ✨"""
+                        
+                        self._add_message("assistant", guidance_msg)
             
             st.rerun()
             
         except Exception as e:
             logger.error(f"Error processing user message: {e}")
-            error_msg = self.app.message_formatter.format_error_message("Message Processing", str(e))
+            error_msg = f"❌ **Processing Error**\n\nI encountered an issue while processing your message: {str(e)}\n\n💡 **Try:**\n• Rephrasing your question\n• Using the search buttons for specific queries\n• Refreshing the page if the problem persists"
             self._add_message("assistant", error_msg)
             st.rerun()
     
     def process_wikipedia_search(self, query: str):
-        """Process Wikipedia search"""
+        """Process Wikipedia search with enhanced RAG capabilities"""
         try:
             # Add search query message
-            search_msg = self.app.message_formatter.format_search_query(query, "wikipedia")
+            search_msg = f"🔍 **Wikipedia Search:** {query}"
             self._add_message("user", search_msg)
             
-            with st.spinner("📖 Searching Wikipedia..."):
-                results = self.app._get_web_search().search_wikipedia(query, max_results=3)
-                
-                if results:
-                    # Format results for display
-                    response = f"""📖 **Wikipedia Search Results for: "{query}"**
-
-🎯 **Quick Summary:**
-• Found {len(results)} relevant Wikipedia articles 📚
-• Great information to explore! ✨
-
-📋 **Key Articles:**"""
-                    
-                    for i, result in enumerate(results, 1):
-                        response += f"\n• **{result['title']}** 🌟\n  📝 {result['summary'][:150]}...\n  🔗 [Read more]({result['url']})"
-                    
-                    response += "\n\n💡 **Pro Tip:**\n• Upload a document and I can combine this Wikipedia info with your content! 📄✨"
-                    
-                    # Create context for future use
-                    context = "\n\n".join([f"{r['title']}: {r['summary']}" for r in results])
-                    self._add_message("assistant", response, context)
+            with st.spinner("🔍 Searching Wikipedia and analyzing content..."):
+                # Use RAG agent for enhanced response
+                if self.rag_agent:
+                    # Force Wikipedia search and enhanced synthesis
+                    response = self._generate_enhanced_wikipedia_response(query)
                 else:
-                    no_results_msg = """😅 **No Wikipedia Results Found!**
-
-🎯 **What happened:**
-• No Wikipedia articles found for this query 📚
-• Wikipedia might not have content on this specific topic 🔍
-
-💡 **Let's try these alternatives:**
-• **Rephrase your search** with different keywords 🔄
-• **Use more specific terms** or try broader concepts 🎯  
-• **Click the 🌐 button** to search the web instead! 🌍
-
-✨ **I'm here to help!** Let's find the information you need together! 😊🚀"""
-                    
-                    self._add_message("assistant", no_results_msg)
+                    # Fallback to basic Wikipedia search
+                    response = self._basic_wikipedia_search(query)
+                
+                self._add_message("assistant", response)
             
             st.rerun()
             
         except Exception as e:
             logger.error(f"Wikipedia search error: {e}")
-            error_msg = self.app.message_formatter.format_error_message("Wikipedia Search", str(e))
+            error_msg = f"❌ **Wikipedia Search Error**\n\nI encountered an issue while searching Wikipedia: {str(e)}\n\n💡 **Try:**\n• Rephrasing your query\n• Using the web search instead\n• Checking your internet connection"
             self._add_message("assistant", error_msg)
             st.rerun()
     
+    def _generate_enhanced_wikipedia_response(self, query: str) -> str:
+        """Generate enhanced Wikipedia response using RAG agent."""
+        try:
+            # Check if we have document content to combine
+            has_document = st.session_state.get('conversation') is not None
+            
+            # Get Wikipedia results
+            wiki_results = self.app._get_web_search().search_wikipedia(query, max_results=3)
+            
+            if not wiki_results:
+                return """🔍 **No Wikipedia Results Found**
+
+I couldn't find relevant Wikipedia articles for your query. 
+
+💡 **Try:**
+• Using different keywords
+• Being more specific or more general
+• Using the 🌐 Web search for broader results"""
+
+            # Format Wikipedia context
+            wiki_context = ""
+            for result in wiki_results:
+                wiki_context += f"**{result['title']}**\n{result['summary']}\nSource: {result['url']}\n\n"
+            
+            # Create comprehensive prompt for synthesis
+            synthesis_prompt = f"""Based on the Wikipedia search for "{query}", provide a comprehensive and engaging response.
+
+WIKIPEDIA RESULTS:
+{wiki_context}
+
+Please create a response that:
+1. Summarizes the key information from Wikipedia
+2. Organizes the content in a clear, structured way
+3. Provides actionable insights where relevant
+4. Uses emojis and formatting for better readability
+5. Includes source attribution
+
+If a document is available, mention how this Wikipedia information could complement the document content.
+
+Response:"""
+            
+            # Generate enhanced response
+            if hasattr(self.app, '_get_ai_handler'):
+                ai_handler = self.app._get_ai_handler()
+                enhanced_response = ai_handler.llm.invoke(synthesis_prompt)
+            else:
+                # Simple formatting if no AI handler
+                enhanced_response = f"📚 **Wikipedia Results for '{query}'**\n\n{wiki_context}"
+            
+            # Add interactive elements
+            final_response = f"""{enhanced_response}
+
+🎯 **Quick Actions:**
+• Want more details? Ask me to explain any specific aspect!
+• Have a document? I can relate this Wikipedia info to your content!
+• Need current info? Try the 🌐 Web search for recent developments!
+
+**Sources:** Wikipedia"""
+            
+            return final_response
+            
+        except Exception as e:
+            logger.error(f"Enhanced Wikipedia response error: {e}")
+            return self._basic_wikipedia_search(query)
+    
+    def _basic_wikipedia_search(self, query: str) -> str:
+        """Basic Wikipedia search fallback."""
+        try:
+            results = self.app._get_web_search().search_wikipedia(query, max_results=3)
+            
+            if results:
+                response = f"""📚 **Wikipedia Results for: "{query}"**
+
+🎯 **Found {len(results)} relevant articles:**\n\n"""
+                
+                for i, result in enumerate(results, 1):
+                    response += f"**{i}. {result['title']}**\n📝 {result['summary'][:200]}...\n🔗 [Read more]({result['url']})\n\n"
+                
+                response += "💡 **Tip:** Ask me to explain any of these topics in more detail!"
+                return response
+            else:
+                return "🔍 **No Wikipedia results found.** Try different keywords or use web search instead!"
+                
+        except Exception as e:
+            return f"❌ **Error searching Wikipedia:** {str(e)}"
+    
     def process_web_search(self, query: str):
-        """Process web search"""
+        """Process web search with enhanced RAG capabilities"""
         try:
             # Add search query message
-            search_msg = self.app.message_formatter.format_search_query(query, "web")
+            search_msg = f"🌐 **Web Search:** {query}"
             self._add_message("user", search_msg)
             
-            with st.spinner("🌐 Searching the web..."):
-                results = self.app._get_web_search().search_duckduckgo(query, max_results=3)
+            with st.spinner("🌐 Searching the web and analyzing results..."):
+                # Use enhanced RAG for comprehensive response
+                if self.rag_agent:
+                    response = self._generate_enhanced_web_response(query)
+                else:
+                    response = self._basic_web_search(query)
                 
-                if results:
-                    # Format results for display
-                    response = f"""🌐 **Web Search Results for: "{query}"**
+                self._add_message("assistant", response)
+            
+            st.rerun()
+            
+        except Exception as e:
+            logger.error(f"Web search error: {e}")
+            error_msg = f"❌ **Web Search Error**\n\nI encountered an issue while searching the web: {str(e)}\n\n💡 **Try:**\n• Rephrasing your query\n• Using the Wikipedia search instead\n• Checking your internet connection"
+            self._add_message("assistant", error_msg)
+            st.rerun()
+    
+    def _generate_enhanced_web_response(self, query: str) -> str:
+        """Generate enhanced web response using RAG agent."""
+        try:
+            # Check if we have document content to combine
+            has_document = st.session_state.get('conversation') is not None
+            
+            # Get web search results
+            web_results = self.app._get_web_search().search_duckduckgo(query, max_results=5)
+            
+            if not web_results:
+                return """🌐 **No Web Results Found**
 
-🎯 **Quick Summary:**
-• Found {len(results)} relevant web pages 🌍
+I couldn't find relevant web pages for your query.
+
+💡 **Try:**
+• Using different or more specific keywords
+• Checking if the topic is too recent or niche
+• Using the 📚 Wikipedia search for factual information"""
+            
+            # Format web context
+            web_context = ""
+            for result in web_results:
+                web_context += f"**{result['title']}**\n{result['summary']}\nURL: {result['url']}\n\n"
+            
+            # If we have a document, combine contexts
+            document_context = ""
+            if has_document:
+                try:
+                    # Try to get relevant document content
+                    doc_results = self.rag_agent._search_document(query)
+                    if "No relevant information" not in doc_results and "Error" not in doc_results:
+                        document_context = f"\n**DOCUMENT CONTEXT:**\n{doc_results}\n\n"
+                except:
+                    pass
+            
+            # Create comprehensive synthesis prompt
+            synthesis_prompt = f"""Based on the web search for "{query}", provide a comprehensive and engaging response.
+
+WEB SEARCH RESULTS:
+{web_context}
+{document_context}
+
+Please create a response that:
+1. Synthesizes the key information from web sources
+2. Organizes content with clear structure and sections
+3. Highlights different perspectives when available
+4. Provides actionable insights and practical information
+5. Uses emojis and formatting for better readability
+6. Cites sources appropriately
+{"7. Relates web information to the document content when relevant" if document_context else ""}
+
+Response:"""
+            
+            # Generate enhanced response
+            if hasattr(self.app, '_get_ai_handler'):
+                ai_handler = self.app._get_ai_handler()
+                enhanced_response = ai_handler.llm.invoke(synthesis_prompt)
+            else:
+                # Simple formatting if no AI handler
+                enhanced_response = f"🌐 **Web Search Results for '{query}'**\n\n{web_context}"
+            
+            # Add interactive elements and source attribution
+            sources_list = [f"[{result['title']}]({result['url']})" for result in web_results[:3]]
+            sources_text = " • ".join(sources_list)
+            
+            final_response = f"""{enhanced_response}
+
+🔗 **Key Sources:** {sources_text}
+
+🎯 **What's Next?**
+• Need more specific info? Ask me to dive deeper into any aspect!
+• Want factual background? Try the 📚 Wikipedia search!
+{"• Curious how this relates to your document? Just ask!" if has_document else "• Have a document? Upload it to see how this info connects!"}
+
+**Sources:** Web Search via DuckDuckGo"""
+            
+            return final_response
+            
+        except Exception as e:
+            logger.error(f"Enhanced web response error: {e}")
+            return self._basic_web_search(query)
+    
+    def _basic_web_search(self, query: str) -> str:
+        """Basic web search fallback."""
+        try:
+            results = self.app._get_web_search().search_duckduckgo(query, max_results=5)
+            
+            if results:
+                response = f"""🌐 **Web Search Results for: "{query}"**
+
+🎯 **Found {len(results)} relevant pages:**\n\n"""
+                
+                for i, result in enumerate(results, 1):
+                    response += f"**{i}. {result['title']}**\n📝 {result['summary'][:200]}...\n🔗 [Visit page]({result['url']})\n\n"
+                
+                response += "💡 **Tip:** Ask me to analyze or explain any of these results in detail!"
+                return response
+            else:
+                return "🌐 **No web results found.** Try different keywords or use Wikipedia search instead!"
+                
+        except Exception as e:
+            return f"❌ **Error searching web:** {str(e)}"
 • Current, real-time information! ✨
 
 📋 **Top Results:**"""

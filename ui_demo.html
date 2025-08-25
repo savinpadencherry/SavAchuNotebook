@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAVIN AI - Enhanced UI Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
+            background-size: 300% 300%;
+            animation: gradientShift 10s ease infinite;
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .main-content {
+            text-align: center;
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .main-title {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff, #f093fb, #667eea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            opacity: 0.9;
+            margin-bottom: 3rem;
+            font-weight: 400;
+        }
+
+        /* Premium floating navbar */
+        .bottom-navbar-container {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            z-index: 9999;
+            
+            background: linear-gradient(135deg, 
+                rgba(15, 15, 35, 0.92) 0%, 
+                rgba(25, 25, 45, 0.88) 50%,
+                rgba(15, 15, 35, 0.92) 100%);
+            backdrop-filter: blur(32px) saturate(200%) contrast(120%);
+            border: 2px solid transparent;
+            border-radius: 28px;
+            padding: 1.5rem;
+            
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: slideUpFloat 0.6s ease-out;
+        }
+
+        @keyframes slideUpFloat {
+            from {
+                opacity: 0;
+                transform: translateY(100px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .navbar-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        /* Enhanced input container */
+        .input-row-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+            border: 2px solid transparent;
+            border-radius: 24px;
+            padding: 0.5rem;
+            backdrop-filter: blur(20px);
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .input-row-container:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 40px rgba(102, 126, 234, 0.3),
+                0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Premium text input */
+        .text-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.95);
+            padding: 1rem 1.25rem;
+            font-size: 1.1rem;
+            font-weight: 400;
+            border-radius: 20px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .text-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Premium buttons */
+        .btn {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            color: rgba(255, 255, 255, 0.95);
+            height: 48px;
+            min-width: 80px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(15px);
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.12) 100%);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 
+                0 8px 25px rgba(102, 126, 234, 0.25),
+                0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Primary button */
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            border: 2px solid rgba(102, 126, 234, 0.4);
+            font-weight: 700;
+            box-shadow: 
+                0 8px 32px rgba(102, 126, 234, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 50%, #e084f0 100%);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 
+                0 12px 40px rgba(102, 126, 234, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border-color: rgba(102, 126, 234, 0.6);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.2);
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #f093fb;
+        }
+
+        .feature-description {
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <h1 class="main-title">🌟 SAVIN AI Enhanced</h1>
+        <p class="subtitle">Modern Chatbot Interface with Advanced RAG Capabilities</p>
+        
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-title">🎨 Premium UI Design</div>
+                <div class="feature-description">
+                    Glassmorphism effects, animated gradients, premium typography, and responsive design that rivals the best chatbots like ChatGPT and Claude.
+                </div>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-title">🤖 Advanced RAG with LangChain</div>
+                <div class="feature-description">
+                    Multi-source intelligence combining document analysis, Wikipedia research, and web search with AI-powered synthesis.
+                </div>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-title">🔍 Intelligent Search</div>
+                <div class="feature-description">
+                    Enhanced Wikipedia and DuckDuckGo integration with context-aware responses and smart error handling.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced floating navbar -->
+    <div class="bottom-navbar-container">
+        <div class="navbar-label">💡 Enhanced Chat Interface</div>
+        <div class="input-row-container">
+            <input type="text" class="text-input" placeholder="Ask me anything - I'll search Wikipedia & Web to give you comprehensive answers...">
+            <button class="btn">🔍 Wiki</button>
+            <button class="btn">🌐 Web</button>
+            <button class="btn btn-primary">Send ✨</button>
+        </div>
+    </div>
+</body>
+</html>

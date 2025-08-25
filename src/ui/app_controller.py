@@ -326,26 +326,31 @@ class ApplicationController:
         # Create columns for the integrated layout - text field takes most space
         input_cols = st.columns([6, 1, 1, 1.2], gap="small")
         
-        # Text input field (main component)
+        # Text input field (main component) with enhanced placeholder
         with input_cols[0]:
+            placeholder_text = (
+                "Ask me anything about your document, or search Wikipedia & Web for insights..." 
+                if has_document 
+                else "Ask me anything - I'll search Wikipedia & Web to give you comprehensive answers..."
+            )
             user_input = st.text_input(
                 "message_input",
-                placeholder="Ask me anything about your document..." if has_document else "Upload a document to start chatting, or search the web...",
+                placeholder=placeholder_text,
                 label_visibility="collapsed",
                 key="unified_message_input"
             )
         
-        # Wikipedia search button 
+        # Wikipedia search button with modern design
         with input_cols[1]:
-            wiki_btn = st.button("📖", key="unified_wiki", help="Search Wikipedia", use_container_width=True)
+            wiki_btn = st.button("🔍 Wiki", key="unified_wiki", help="Search Wikipedia for additional context", use_container_width=True)
         
-        # Web search button
+        # DuckDuckGo search button with modern design
         with input_cols[2]:
-            web_btn = st.button("🌐", key="unified_web", help="Search Web", use_container_width=True)
+            web_btn = st.button("🌐 Web", key="unified_web", help="Search the web with DuckDuckGo", use_container_width=True)
         
-        # Send button (primary action)
+        # Send button (primary action) with enhanced styling
         with input_cols[3]:
-            send_btn = st.button("Send ➤", key="unified_send", help="Send Message", use_container_width=True, type="primary")
+            send_btn = st.button("Send ✨", key="unified_send", help="Send Message", use_container_width=True, type="primary")
         
         st.markdown('</div>', unsafe_allow_html=True)  # Close input-row-container
         st.markdown("""
