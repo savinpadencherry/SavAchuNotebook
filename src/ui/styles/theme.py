@@ -184,19 +184,52 @@ def get_layout_styles() -> str:
 def get_input_styles() -> str:
     """Get input and form-related CSS styles - Enhanced unified navbar design"""
     return """
-    /* Fixed Bottom Navigation Container - Floating Design */
+    /* Fixed Bottom Navigation Container - Premium Floating Design */
     .bottom-navbar-container {
         position: fixed !important;
-        bottom: 20px !important;
-        left: 20px !important;
-        right: 20px !important;
+        bottom: 24px !important;
+        left: 24px !important;
+        right: 24px !important;
         z-index: 9999 !important;
         
-        /* Modern glassmorphism floating card */
-        background: rgba(15, 15, 35, 0.9) !important;
-        backdrop-filter: blur(25px) saturate(200%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        border-radius: 20px !important;
+        /* Premium glassmorphism floating card with enhanced effects */
+        background: linear-gradient(135deg, 
+            rgba(15, 15, 35, 0.92) 0%, 
+            rgba(25, 25, 45, 0.88) 50%,
+            rgba(15, 15, 35, 0.92) 100%) !important;
+        backdrop-filter: blur(32px) saturate(200%) contrast(120%) !important;
+        border: 2px solid transparent !important;
+        border-radius: 28px !important;
+        
+        /* Premium gradient border */
+        background-clip: padding-box !important;
+        position: relative !important;
+    }
+    
+    /* Animated gradient border */
+    .bottom-navbar-container::before {
+        content: '' !important;
+        position: absolute !important;
+        top: -2px !important;
+        left: -2px !important;
+        right: -2px !important;
+        bottom: -2px !important;
+        border-radius: 28px !important;
+        background: linear-gradient(45deg, 
+            rgba(102, 126, 234, 0.3) 0%,
+            rgba(118, 75, 162, 0.3) 25%,
+            rgba(240, 147, 251, 0.3) 50%,
+            rgba(245, 87, 108, 0.3) 75%,
+            rgba(79, 172, 254, 0.3) 100%
+        ) !important;
+        z-index: -1 !important;
+        animation: borderGlow 3s ease-in-out infinite alternate !important;
+    }
+    
+    @keyframes borderGlow {
+        0% { opacity: 0.3; }
+        100% { opacity: 0.7; }
+    }
         
         /* Enhanced floating shadow */
         box-shadow: 
@@ -239,83 +272,171 @@ def get_input_styles() -> str:
         text-align: center !important;
     }
 
-    /* Main input container - unified design */
+    /* Main input container - premium chatbot design inspired by ChatGPT/Claude */
     .input-row-container {
         display: flex !important;
         align-items: center !important;
-        gap: 0.5rem !important;
-        background: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 15px !important;
-        padding: 0.3rem !important;
-        backdrop-filter: blur(10px) !important;
+        gap: 0.75rem !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%) !important;
+        border: 2px solid transparent !important;
+        border-radius: 24px !important;
+        padding: 0.5rem !important;
+        backdrop-filter: blur(20px) !important;
+        position: relative !important;
         
-        /* Inner glow effect */
+        /* Premium gradient border effect */
+        background-clip: padding-box !important;
         box-shadow: 
-            inset 0 1px 0 rgba(255, 255, 255, 0.1),
-            0 4px 20px rgba(102, 126, 234, 0.15) !important;
+            inset 0 1px 0 rgba(255, 255, 255, 0.15),
+            0 8px 32px rgba(102, 126, 234, 0.2),
+            0 4px 16px rgba(0, 0, 0, 0.1) !important;
+        
+        /* Hover effect for premium feel */
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    
+    .input-row-container:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+        box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.2),
+            0 12px 40px rgba(102, 126, 234, 0.3),
+            0 6px 20px rgba(0, 0, 0, 0.15) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    /* Animated gradient border effect */
+    .input-row-container::before {
+        content: '' !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        border-radius: 24px !important;
+        padding: 2px !important;
+        background: linear-gradient(45deg, 
+            rgba(102, 126, 234, 0.6) 0%,
+            rgba(118, 75, 162, 0.6) 25%,
+            rgba(240, 147, 251, 0.6) 50%,
+            rgba(245, 87, 108, 0.6) 75%,
+            rgba(79, 172, 254, 0.6) 100%
+        ) !important;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+        mask-composite: xor !important;
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+        -webkit-mask-composite: xor !important;
+        opacity: 0 !important;
+        transition: opacity 0.4s ease !important;
+    }
+    
+    .input-row-container:focus-within::before {
+        opacity: 1 !important;
     }
 
-    /* Text input styling - seamlessly integrated */
+    /* Premium text input styling - ChatGPT inspired */
     .bottom-navbar-container .stTextInput > div > div {
         border: none !important;
         background: transparent !important;
-        border-radius: 12px !important;
+        border-radius: 20px !important;
     }
 
     .bottom-navbar-container .stTextInput input {
         background: transparent !important;
         border: none !important;
         color: rgba(255, 255, 255, 0.95) !important;
-        padding: 0.75rem 1rem !important;
-        font-size: 1rem !important;
+        padding: 1rem 1.25rem !important;
+        font-size: 1.1rem !important;
+        font-weight: 400 !important;
+        line-height: 1.5 !important;
         outline: none !important;
-        border-radius: 12px !important;
-        transition: all 0.3s ease !important;
+        border-radius: 20px !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
     }
 
     .bottom-navbar-container .stTextInput input::placeholder {
-        color: rgba(255, 255, 255, 0.5) !important;
-        font-style: italic !important;
+        color: rgba(255, 255, 255, 0.6) !important;
+        font-style: normal !important;
+        font-weight: 400 !important;
+        letter-spacing: 0.01em !important;
     }
 
     .bottom-navbar-container .stTextInput input:focus {
-        background: rgba(255, 255, 255, 0.05) !important;
-        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3) !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: rgba(255, 255, 255, 1) !important;
+        transform: scale(1.01) !important;
     }
 
-    /* Action buttons - cohesive design within the container */
+    /* Premium action buttons - Modern chatbot style */
     .bottom-navbar-container .stButton > button {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        border-radius: 12px !important;
-        color: rgba(255, 255, 255, 0.9) !important;
-        height: 42px !important;
-        font-size: 0.9rem !important;
-        font-weight: 500 !important;
-        transition: all 0.3s ease !important;
-        backdrop-filter: blur(5px) !important;
-    }
-
-    .bottom-navbar-container .stButton > button:hover {
-        background: rgba(255, 255, 255, 0.15) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
-    }
-
-    /* Primary send button - distinctive styling */
-    .bottom-navbar-container .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        border: 1px solid rgba(102, 126, 234, 0.3) !important;
-        color: white !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 16px !important;
+        color: rgba(255, 255, 255, 0.95) !important;
+        height: 48px !important;
+        min-width: 48px !important;
+        font-size: 1.1rem !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        backdrop-filter: blur(15px) !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    
+    /* Hover effect for search buttons */
+    .bottom-navbar-container .stButton > button:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.12) 100%) !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        transform: translateY(-2px) scale(1.05) !important;
+        box-shadow: 
+            0 8px 25px rgba(102, 126, 234, 0.25),
+            0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    /* Active state */
+    .bottom-navbar-container .stButton > button:active {
+        transform: translateY(0) scale(0.98) !important;
     }
 
+    /* Premium primary send button - ChatGPT inspired */
+    .bottom-navbar-container .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%) !important;
+        border: 2px solid rgba(102, 126, 234, 0.4) !important;
+        color: white !important;
+        font-weight: 700 !important;
+        font-size: 1rem !important;
+        padding: 0 1.5rem !important;
+        box-shadow: 
+            0 8px 32px rgba(102, 126, 234, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    
+    /* Primary button hover with premium effect */
     .bottom-navbar-container .stButton > button[kind="primary"]:hover {
-        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 50%, #e084f0 100%) !important;
+        transform: translateY(-3px) scale(1.02) !important;
+        box-shadow: 
+            0 12px 40px rgba(102, 126, 234, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+        border-color: rgba(102, 126, 234, 0.6) !important;
+    }
+    
+    /* Shimmer effect for primary button */
+    .bottom-navbar-container .stButton > button[kind="primary"]::after {
+        content: '' !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: -100% !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent) !important;
+        transition: left 0.6s !important;
+    }
+    
+    .bottom-navbar-container .stButton > button[kind="primary"]:hover::after {
+        left: 100% !important;
     }
 
     /* Quick action buttons - secondary style */
