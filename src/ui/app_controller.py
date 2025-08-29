@@ -281,9 +281,6 @@ class ApplicationController:
                     document_info=chat_info
                 )
             
-            # Bottom input bar
-            self._render_bottom_input_bar(has_document)
-            
         except Exception as e:
             logger.error(f"Error rendering chat interface: {e}")
             st.error("Error loading chat interface")
@@ -302,29 +299,11 @@ class ApplicationController:
             <div class="navbar-content-wrapper">
         """, unsafe_allow_html=True)
         
-        # Quick prompts section (integrated within the navbar)
-        if has_document:
-            st.markdown("**💡 Quick Actions**")
-            prompt_cols = st.columns(4, gap="small")
-            prompts = ["📝 Summarize", "🔍 Key Points", "💡 Concepts", "❓ Questions"]
-            
-            for i, prompt in enumerate(prompts):
-                with prompt_cols[i]:
-                    if st.button(prompt, key=f"quick_prompt_{i}", use_container_width=True, type="secondary"):
-                        prompt_text = {
-                            "📝 Summarize": "Please provide a comprehensive summary of this document",
-                            "🔍 Key Points": "What are the main key points and takeaways?",
-                            "💡 Concepts": "Explain the main concepts and ideas presented",
-                            "❓ Questions": "Generate 5 thoughtful questions based on this content"
-                        }
-                        self.message_handlers.process_user_message(prompt_text[prompt], has_document)
-                        st.rerun()
-        
         # Main unified input container
         st.markdown('<div class="input-row-container">', unsafe_allow_html=True)
-        
+
         # Create columns for the integrated layout - text field takes most space
-        input_cols = st.columns([6, 1, 1, 1.2], gap="small")
+        input_cols = st.columns([8, 1, 1.5], gap="small")
         
         # Text input field (main component) with enhanced placeholder
         with input_cols[0]:
@@ -344,12 +323,8 @@ class ApplicationController:
         with input_cols[1]:
             wiki_btn = st.button("🔍 Wiki", key="unified_wiki", help="Search Wikipedia for additional context", use_container_width=True)
         
-        # DuckDuckGo search button with modern design
-        with input_cols[2]:
-            web_btn = st.button("🌐 Web", key="unified_web", help="Search the web with DuckDuckGo", use_container_width=True)
-        
         # Send button (primary action) with enhanced styling
-        with input_cols[3]:
+        with input_cols[2]:
             send_btn = st.button("Send ✨", key="unified_send", help="Send Message", use_container_width=True, type="primary")
         
         st.markdown('</div>', unsafe_allow_html=True)  # Close input-row-container
@@ -359,12 +334,10 @@ class ApplicationController:
         """, unsafe_allow_html=True)  # Close navbar containers
         
         # Process user input based on which action was triggered
-        if user_input and (send_btn or wiki_btn or web_btn):
+        if user_input and (send_btn or wiki_btn):
             try:
                 if wiki_btn:
                     self.message_handlers.process_wikipedia_search(user_input)
-                elif web_btn:
-                    self.message_handlers.process_web_search(user_input)
                 else:
                     self.message_handlers.process_user_message(user_input, has_document)
                 
