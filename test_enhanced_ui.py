@@ -38,7 +38,7 @@ def test_enhanced_features():
     
     # Test 4: UI Improvements
     print("\n✅ UI Improvements:")
-    print("   - Modern button labels (🔍 Wiki, 🌐 Web, Send ✨)")
+    print("   - Modern button labels (🔍 Wiki, Send ✨)")
     print("   - Engaging placeholders for better UX")
     print("   - Premium animations and transitions")
     print("   - Responsive design elements")
