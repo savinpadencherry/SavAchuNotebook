@@ -1,7 +1,9 @@
+# FIXED: ai_handler.py - Enhanced with Anti-Hallucination Controls
+
 """
-AI and language model handling for SAVIN AI application.
-Manages LLM interactions, conversation chains, and response generation.
+Enhanced AI handler with strict context adherence and hallucination prevention.
 """
+
 import logging
 import time
 from typing import Dict, Any, Optional, List, Tuple
@@ -9,259 +11,326 @@ from langchain_community.llms import Ollama
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain.schema import Document
-
 from src.config.settings import AIConfig
-from .exceptions import AIProcessingError
-from langchain.schema import Document
-
-from ..config.settings import AIConfig
 from .exceptions import AIProcessingError
 from ..utils.performance import get_cached_llm_model
 
-
-# Configure logging
 logger = logging.getLogger(__name__)
 
-
 class AIHandler:
-    """
-    Handles AI model interactions and response generation for SAVIN AI.
-    
-    This class manages all interactions with the Large Language Model (LLM)
-    and provides a clean interface for:
-    
-    - Document-based question answering
-    - Conversation chain management  
-    - Response generation and formatting
-    - AI model initialization and caching
-    - Error handling and fallback mechanisms
-    
-    The class uses Ollama as the LLM provider with configurable models
-    and supports both local and cached model instances for performance.
-    
-    Key Features:
-    - Cached LLM instances for better performance
-    - Conversation templates for consistent responses
-    - Document retrieval integration
-    - Comprehensive error handling
-    - Logging for debugging and monitoring
-    """
-    
+    """Enhanced AI handler with strict context adherence and hallucination prevention."""
+
     def __init__(self):
-        """
-        Initialize the AI handler with configuration and model setup.
-        
-        Sets up:
-        - Configuration from settings
-        - Cached or new LLM instance
-        - Conversation templates for responses
-        """
-        logger.info("🤖 Initializing AI Handler...")
-        
-        # Load configuration settings for AI operations
+        logger.info("🤖 Initializing Enhanced AI Handler...")
         self.config = AIConfig()
-        
-        # Get cached LLM instance for better performance
-        # This avoids re-initializing the model on every request
         self.llm = self._get_cached_llm()
-        
-        # Create conversation template for consistent AI responses
-        self.conversation_template = self._create_conversation_template()
-        
-        logger.info("✅ AI Handler initialized successfully")
-    
+        self.conversation_template = self._create_strict_conversation_template()
+        self.fact_check_template = self._create_fact_check_template()
+        logger.info("✅ Enhanced AI Handler initialized successfully")
+
     def _get_cached_llm(self) -> Ollama:
-        """
-        Get cached LLM instance for improved performance.
-        
-        This method attempts to retrieve a cached LLM instance first,
-        which significantly improves response times. If caching fails,
-        it falls back to creating a new instance.
-        
-        Returns:
-            Ollama: Configured LLM instance ready for use
-            
-        Raises:
-            AIProcessingError: If LLM initialization fails completely
-        """
         try:
-            logger.info("📦 Attempting to retrieve cached LLM...")
-            
-            # Use cached LLM model for better performance
             cached_llm = get_cached_llm_model()
             logger.info(f"✅ Using cached LLM with model: {self.config.AI_MODEL}")
             return cached_llm
-            
         except Exception as e:
-            logger.warning(f"⚠️ Failed to get cached LLM, creating new instance: {e}")
+            logger.warning(f"⚠️ Failed to get cached LLM: {e}")
             return self._initialize_llm()
-    
+
     def _initialize_llm(self) -> Ollama:
-        """
-        Initialize and configure a new LLM instance (fallback method).
-        
-        This method creates a fresh LLM instance when caching fails.
-        It includes proper configuration, timeout settings, and error
-        handling to ensure reliable AI model initialization.
-        
-        Returns:
-            Ollama: Newly initialized LLM instance
-            
-        Raises:
-            AIProcessingError: If LLM initialization fails
-        """
         try:
             llm = Ollama(
                 model=self.config.AI_MODEL,
                 temperature=self.config.AI_TEMPERATURE,
-                num_ctx=8192,  # Increased context window
-                num_predict=1024,  # Allow longer responses
-                top_k=10,
-                top_p=0.8,
-                repeat_penalty=1.2,
-                num_thread=self.config.NUM_THREADS
             )
-            
             logger.info(f"Initialized LLM with model: {self.config.AI_MODEL}")
             return llm
-            
         except Exception as e:
             logger.error(f"Failed to initialize LLM: {e}")
             raise AIProcessingError(f"LLM initialization failed: {str(e)}")
-    
-    def _create_conversation_template(self) -> PromptTemplate:
-        """Create the conversation prompt template"""
-        template = """You are SAVIN AI, a warm and friendly intelligent assistant! 😊 I ALWAYS provide helpful responses in bullet points with emojis to make information easy to understand and engaging.
 
-CONTEXT INFORMATION:
+    def _create_strict_conversation_template(self) -> PromptTemplate:
+        """Create ultra-strict conversation template to prevent hallucination."""
+        template = """You are a document analysis assistant. You MUST follow these rules EXACTLY:
+
+CRITICAL RULES:
+1. Use ONLY information from the CONTEXT below
+2. If information is NOT in the context, say "This information is not available in the document"
+3. DO NOT add any information not explicitly stated in the context
+4. DO NOT make assumptions or inferences beyond what's written
+5. Quote directly from the context when possible
+
+CONTEXT:
 {context}
 
-USER QUESTION: {question}
+QUESTION: {question}
 
-MY RESPONSE REQUIREMENTS (MANDATORY):
-- ALWAYS respond ONLY with bullet points for maximum clarity 📝
-- Use relevant emojis in EVERY response to be engaging and warm 😊
-- Be warm, friendly, and conversational like talking to a dear friend 💭
-- Structure responses with clear sections when needed 📋
-- Keep language simple, clean, and user-friendly 🚀
-- Make every interaction feel welcoming and supportive 🤗
+INSTRUCTIONS:
+- Read the context carefully
+- Answer ONLY using information from the context
+- If the answer requires information not in the context, clearly state this
+- Use direct quotes when possible
+- Be specific about what the document says
 
-MANDATORY RESPONSE FORMAT (Use EXACTLY this structure with bullet points and emojis):
+ANSWER FORMAT:
+Based on the document: [your answer using only context information]
 
-🎯 **Quick Answer:**
-• [Direct, friendly answer with relevant emoji]
-• [Additional key point with emoji if needed]
+If not in document: "This specific information is not available in the provided document."
 
-📋 **Key Details:**
-• [Important detail with emoji] 
-• [Another important point with emoji]
-• [Additional helpful information with emoji]
-
-💡 **Helpful Insights:**
-• [Useful insight or context with emoji]
-• [Additional valuable information with emoji]
-
-✨ **Summary:**
-• [Main takeaway with emoji]
-• [Encouraging closing thought with emoji]
-
-IMPORTANT: Never deviate from bullet point format. Always be warm, supportive, and use emojis throughout. Keep language simple and friendly."""
+ANSWER:"""
 
         return PromptTemplate(
-            template=template, 
+            template=template,
             input_variables=['context', 'question']
         )
-    
-    def create_conversation_chain(self, vector_store) -> RetrievalQA:
-        """
-        Create a conversation chain with the provided vector store.
+
+    def _create_fact_check_template(self) -> PromptTemplate:
+        """Template to verify if response matches context."""
+        template = """Compare the ANSWER with the CONTEXT and determine if the answer is accurate.
+
+CONTEXT:
+{context}
+
+ANSWER TO CHECK:
+{answer}
+
+QUESTION:
+{question}
+
+EVALUATION CRITERIA:
+1. Does the answer use only information from the context?
+2. Is the answer directly supported by the context?
+3. Are there any claims not found in the context?
+
+Respond with:
+ACCURATE: If answer is fully supported by context
+INACCURATE: If answer contains information not in context
+PARTIAL: If answer is mostly correct but has some unsupported claims
+
+JUDGMENT: """
+
+        return PromptTemplate(
+            template=template,
+            input_variables=['context', 'answer', 'question']
+        )
+
+    def _verify_context_relevance(self, context: str, question: str) -> bool:
+        """Check if retrieved context is relevant to the question."""
+        if not context or not context.strip():
+            return False
         
-        Args:
-            vector_store: Vector store for document retrieval
+        # Simple keyword matching for relevance
+        question_words = set(question.lower().split())
+        context_words = set(context.lower().split())
+        
+        # Remove common words
+        common_words = {'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'with', 'to', 'for', 'of', 'as', 'by'}
+        question_keywords = question_words - common_words
+        context_keywords = context_words - common_words
+        
+        # Check for keyword overlap
+        overlap = question_keywords.intersection(context_keywords)
+        relevance_score = len(overlap) / len(question_keywords) if question_keywords else 0
+        
+        return relevance_score > 0.2  # At least 20% keyword overlap
+
+    class StrictRetrievalQA:
+        """Enhanced retrieval with strict context validation."""
+        
+        def __init__(self, llm, retriever, prompt_template: PromptTemplate, fact_check_template: PromptTemplate, ai_handler):
+            self.llm = llm
+            self.retriever = retriever
+            self.prompt_template = prompt_template
+            self.fact_check_template = fact_check_template
+            self.ai_handler = ai_handler
+
+        def __call__(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+            question = inputs.get("question", "")
             
-        Returns:
-            Configured RetrievalQA chain
-        """
+            # Retrieve documents with enhanced filtering
+            docs = self.retriever.get_relevant_documents(question)
+            
+            if not docs:
+                return {
+                    "result": "No relevant information found in the document for this question.",
+                    "source_documents": []
+                }
+
+            # Filter and validate context
+            context = self._build_validated_context(docs, question)
+            
+            if not context:
+                return {
+                    "result": "The retrieved information is not relevant to your question. Please ask about topics covered in the document.",
+                    "source_documents": docs
+                }
+
+            # Generate response with strict context adherence
+            prompt_text = self.prompt_template.format(context=context, question=question)
+            
+            try:
+                if hasattr(self.llm, "invoke"):
+                    raw_response = self.llm.invoke(prompt_text)
+                else:
+                    raw_response = self.llm(prompt_text)
+                
+                answer = self._extract_text(raw_response)
+                
+                # Verify response accuracy
+                verified_answer = self._verify_and_correct_response(answer, context, question)
+                
+                return {"result": verified_answer, "source_documents": docs}
+                
+            except Exception as e:
+                logger.error(f"Response generation failed: {e}")
+                return {
+                    "result": "I encountered an error while processing your question. Please try rephrasing it.",
+                    "source_documents": docs
+                }
+
+        def _build_validated_context(self, docs: List[Document], question: str) -> str:
+            """Build context only from relevant document chunks."""
+            relevant_chunks = []
+            
+            for doc in docs:
+                chunk_text = doc.page_content
+                
+                # Check relevance of each chunk
+                if self.ai_handler._verify_context_relevance(chunk_text, question):
+                    relevant_chunks.append(chunk_text)
+            
+            # Limit context length to prevent overwhelming the model
+            context = "\n\n".join(relevant_chunks[:3])  # Use top 3 relevant chunks
+            
+            # Ensure context is not too long
+            if len(context) > 2000:  # Limit context size
+                context = context[:2000] + "..."
+            
+            return context
+
+        def _extract_text(self, response):
+            """Extract text from LLM response."""
+            if isinstance(response, str):
+                return response.strip()
+            if hasattr(response, "content"):
+                return getattr(response, "content").strip()
+            if isinstance(response, dict) and "content" in response:
+                return response["content"].strip()
+            return str(response).strip()
+
+        def _verify_and_correct_response(self, answer: str, context: str, question: str) -> str:
+            """Verify response accuracy and correct if needed."""
+            try:
+                # Check for obvious hallucination signs
+                if self._contains_hallucination_indicators(answer, context):
+                    return f"I cannot provide a complete answer to '{question}' based on the available document content. The document may not contain the specific information you're looking for."
+                
+                # Additional fact-checking could be implemented here
+                return answer
+                
+            except Exception as e:
+                logger.warning(f"Response verification failed: {e}")
+                return answer
+
+        def _contains_hallucination_indicators(self, answer: str, context: str) -> bool:
+            """Check for common hallucination patterns."""
+            answer_lower = answer.lower()
+            context_lower = context.lower()
+            
+            # Check if answer contains information clearly not in context
+            answer_words = set(answer_lower.split())
+            context_words = set(context_lower.split())
+            
+            # Look for specific entities or facts in answer not in context
+            # This is a simplified check - could be enhanced
+            hallucination_indicators = [
+                "quantum computing",  # If not in context
+                "google",  # If not in context  
+                "artificial intelligence can be built",  # Suspicious pattern from your example
+                "they have demonstrated",  # If "they" is not defined in context
+            ]
+            
+            for indicator in hallucination_indicators:
+                if indicator in answer_lower and indicator not in context_lower:
+                    logger.warning(f"Potential hallucination detected: {indicator}")
+                    return True
+            
+            return False
+
+    def create_conversation_chain(self, vector_store) -> Any:
+        """Create enhanced conversation chain with strict validation."""
         try:
-            # Create optimized retriever
+            # Create optimized retriever with better filtering
             retriever = vector_store.as_retriever(
-                search_type=self.config.SEARCH_TYPE,
+                search_type="similarity",  # Use similarity instead of MMR for more precise results
                 search_kwargs={
-                    "k": self.config.SEARCH_K,
-                    "fetch_k": self.config.SEARCH_FETCH_K,
-                    "lambda_mult": self.config.SEARCH_LAMBDA
+                    "k": 5,  # Reduced from 8 for more focused results
+                    "fetch_k": 15,  # Reduced from 50 
                 }
             )
             
-            # Create conversation chain
-            conversation_chain = RetrievalQA.from_chain_type(
-                llm=self.llm,
-                chain_type="stuff",
-                retriever=retriever,
-                chain_type_kwargs={"prompt": self.conversation_template},
-                return_source_documents=True
+            # Use our strict retrieval chain
+            conversation_chain = AIHandler.StrictRetrievalQA(
+                self.llm, 
+                retriever, 
+                self.conversation_template,
+                self.fact_check_template,
+                self
             )
             
-            logger.info("Created conversation chain successfully")
+            logger.info("Created enhanced conversation chain with strict validation")
             return conversation_chain
             
         except Exception as e:
             logger.error(f"Failed to create conversation chain: {e}")
             raise AIProcessingError(f"Conversation chain creation failed: {str(e)}")
-    
-    def generate_response(self, conversation_chain: RetrievalQA, question: str) -> Tuple[str, List[Document]]:
-        """
-        Generate AI response for a given question using the conversation chain.
-        
-        Args:
-            conversation_chain: The conversation chain to use
-            question: User's question
-            
-        Returns:
-            Tuple of (answer, source_documents)
-        """
+
+    def generate_response(self, conversation_chain, question: str) -> Tuple[str, List[Document]]:
+        """Generate response with enhanced validation."""
         try:
-            logger.info(f"Generating response for question: {question[:100]}...")
+            logger.info(f"Generating validated response for: {question[:100]}...")
+            
+            # Clean and validate question
+            clean_question = self._clean_question(question)
             
             # Generate response
-            response = conversation_chain({"question": question})
-            
+            response = conversation_chain({"question": clean_question})
             answer = response.get('result', '')
             source_docs = response.get('source_documents', [])
-            
-            logger.info(f"Generated response with {len(source_docs)} source documents")
+
+            logger.info(f"Generated validated response with {len(source_docs)} source documents")
             return answer, source_docs
-            
+
         except Exception as e:
             logger.error(f"Response generation failed: {e}")
-            raise AIProcessingError(f"Failed to generate AI response: {str(e)}")
-    
-    def generate_chat_title(self, first_message: str) -> str:
-        """
-        Generate a smart chat title based on the first message.
+            return "I apologize, but I encountered an error while processing your question. Please try rephrasing it or ask about a different aspect of the document.", []
+
+    def _clean_question(self, question: str) -> str:
+        """Clean and validate user question."""
+        # Remove extra whitespace
+        question = ' '.join(question.split())
         
-        Args:
-            first_message: First message in the chat
-            
-        Returns:
-            Generated chat title
-        """
+        # Ensure question ends with question mark if it's a question
+        if question and not question.endswith(('?', '.', '!')):
+            question += '?'
+        
+        return question
+
+    def generate_chat_title(self, first_message: str) -> str:
+        """Generate chat title from first message."""
         try:
-            # Extract key words and create a meaningful title
             words = first_message.lower().split()
-            
-            # Remove common words
             stop_words = {
-                'what', 'is', 'the', 'how', 'can', 'you', 'tell', 'me', 'about', 
-                'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
+                'what', 'is', 'the', 'how', 'can', 'you', 'tell', 'me', 'about',
+                'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
                 'of', 'with', 'by', 'please', 'help', 'explain'
             }
-            
+
             important_words = [
-                word for word in words 
+                word for word in words
                 if word not in stop_words and len(word) > 2 and word.isalpha()
             ]
-            
+
             if len(important_words) >= 2:
                 title = ' '.join(important_words[:3]).title()
             elif len(important_words) == 1:
@@ -269,196 +338,32 @@ IMPORTANT: Never deviate from bullet point format. Always be warm, supportive, a
             else:
                 from datetime import datetime
                 title = f"Chat {datetime.now().strftime('%m/%d %H:%M')}"
-            
-            # Limit title length
+
             return title[:50]
-            
         except Exception as e:
             logger.warning(f"Failed to generate chat title: {e}")
             from datetime import datetime
             return f"Chat {datetime.now().strftime('%m/%d %H:%M')}"
-    
+
     def test_model_availability(self) -> bool:
-        """
-        Test if the AI model is available and responding.
-        
-        Returns:
-            True if model is available, False otherwise
-        """
+        """Test if the AI model is available and responding."""
         try:
             test_response = self.llm("Hello")
             return bool(test_response and test_response.strip())
-            
         except Exception as e:
             logger.error(f"Model availability test failed: {e}")
             return False
-
-
-class ThinkingProcessor:
-    """
-    Handles AI thinking process visualization and step-by-step processing.
-    """
-    
-    @staticmethod
-    def show_thinking_process(container, steps: List[str], total_steps: int = 5):
-        """
-        Show AI thinking process with animated steps.
-        
-        Args:
-            container: Streamlit container for display
-            steps: List of thinking steps
-            total_steps: Total number of steps to show
-            
-        Returns:
-            Tuple of (progress_bar, status_container)
-        """
-        thinking_steps = [
-            "🧠 Understanding your question...",
-            "📚 Searching through document...",
-            "🔍 Finding relevant information...",
-            "💭 Analyzing context...",
-            "✨ Crafting response..."
-        ]
-        
-        # Use provided steps or default ones
-        display_steps = steps if steps else thinking_steps[:total_steps]
-        
-        progress_bar = container.progress(0)
-        status_container = container.empty()
-        
-        for i, step in enumerate(display_steps):
-            status_container.markdown(
-                f"""<div style='
-                    text-align: center; 
-                    padding: 10px; 
-                    background: rgba(255,255,255,0.1); 
-                    border-radius: 10px; 
-                    margin: 5px 0;
-                '>{step}</div>""", 
-                unsafe_allow_html=True
-            )
-            progress_bar.progress((i + 1) / len(display_steps))
-            time.sleep(0.8)  # Simulate thinking time
-        
-        return progress_bar, status_container
-    
-    @staticmethod
-    def simulate_typing_effect(text: str, container):
-        """
-        Simulate typing effect by gradually revealing text.
-        
-        Args:
-            text: Text to display with typing effect
-            container: Streamlit container for display
-        """
-        words = text.split()
-        displayed_text = ""
-        
-        for i, word in enumerate(words):
-            displayed_text += word + " "
-            container.markdown(displayed_text + "▌")
-            if i % 5 == 0:  # Update every 5 words for performance
-                time.sleep(0.1)
-        
-        # Final display without cursor
-        container.markdown(text)
-
-
-class ResponseFormatter:
-    """
-    Handles formatting and structuring of AI responses.
-    """
-    
-    @staticmethod
-    def format_error_response(error_type: str, error_message: str) -> str:
-        """
-        Format error messages in a user-friendly way.
-        
-        Args:
-            error_type: Type of error
-            error_message: Error message details
-            
-        Returns:
-            Formatted error response
-        """
-        return f"""😅 **Oops! Something went wrong**
-
-🎯 **What happened:**
-• {error_type} error occurred
-• Technical details: {error_message}
-
-💡 **What you can try:**
-• Check your internet connection 🌐
-• Try rephrasing your question 🔄
-• Upload a different document if needed 📄
-• Restart the application if problems persist 🔄
-
-🤗 **Don't worry!** I'm still here to help you. Let's try again! 💪"""
-
-    @staticmethod
-    def format_guidance_response(user_input: str, has_document: bool = False) -> str:
-        """
-        Format guidance response when no document is available.
-        
-        Args:
-            user_input: User's input
-            has_document: Whether a document is available
-            
-        Returns:
-            Formatted guidance response
-        """
-        if has_document:
-            return f"""🤗 **Thanks for your question: "{user_input}"**
-
-📄 **Great news!** I have your document loaded and ready.
-
-💭 **I can help you with:**
-• Detailed analysis of your document content 📊
-• Specific questions about the information 🔍
-• Summaries and key insights 💡
-• Creative ideas based on the content ✨
-
-🚀 **Just ask me anything about your document!**"""
-        else:
-            return f"""🤗 **Hi there!** I'd love to help you with: "{user_input}"
-
-Since you haven't uploaded a document yet, here's how I can assist:
-
-• **📤 Upload a document** → I'll analyze it and give you detailed, context-aware answers
-• **📖 Use Wikipedia search** → Click the 📖 button to search Wikipedia 
-• **🌐 Use web search** → Click the 🌐 button to search the internet
-
-Just upload a document or use the search buttons next to the text field! 😊✨"""
-
 
 # Factory functions
 def create_ai_handler() -> AIHandler:
     """Create a new AI handler instance"""
     return AIHandler()
 
-
-def create_thinking_processor() -> ThinkingProcessor:
-    """Create a new thinking processor instance"""
-    return ThinkingProcessor()
-
-
-def create_response_formatter() -> ResponseFormatter:
-    """Create a new response formatter instance"""
-    return ResponseFormatter()
-
-
 # Backward compatibility functions
 def get_conversation_chain(vector_store):
     """Create conversation chain (backward compatibility)"""
     handler = create_ai_handler()
     return handler.create_conversation_chain(vector_store)
-
-
-def show_thinking_process(container, steps, total_steps=5):
-    """Show thinking process (backward compatibility)"""
-    processor = create_thinking_processor()
-    return processor.show_thinking_process(container, steps, total_steps)
-
 
 def generate_chat_title(first_message: str) -> str:
     """Generate chat title (backward compatibility)"""

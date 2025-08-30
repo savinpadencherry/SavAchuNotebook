@@ -129,8 +129,9 @@ class EnhancedRAGAgent:
             if not self.vector_store:
                 return "No document is currently loaded."
             
-            # Retrieve relevant documents
-            docs = self.vector_store.similarity_search(query, k=3)
+            # Retrieve relevant documents using configured recall depth
+            k = max(getattr(self.config, 'SEARCH_K', 8), 8)
+            docs = self.vector_store.similarity_search(query, k=k)
             
             if not docs:
                 return "No relevant information found in the document."
@@ -142,6 +143,44 @@ class EnhancedRAGAgent:
         except Exception as e:
             logger.error(f"Document search error: {e}")
             return f"Error searching document: {str(e)}"
+
+    def _get_document_context(self, query: str, k: int = 5):
+        """Return concatenated document context and raw docs for the query."""
+        try:
+            if not self.vector_store:
+                return "", []
+            # Use configured recall; prefer higher depth
+            k_eff = max(getattr(self.config, 'SEARCH_K', k), k)
+            docs = self.vector_store.similarity_search(query, k=k_eff)
+            context = "\n\n".join([doc.page_content for doc in docs])
+            return context, docs
+        except Exception as e:
+            logger.warning(f"Failed to build document context: {e}")
+            return "", []
+
+    def _strict_answer(self, question: str, context: str, source_label: str = "Context") -> str:
+        """Ask LLM to extract answer strictly from context; otherwise return NOT_FOUND."""
+        if not context:
+            return "NOT_FOUND"
+        prompt = (
+            "Use ONLY the text below to answer the question. If the answer text is not present verbatim in the text, respond with 'NOT_FOUND'.\n"
+            "Return exactly this format:\n"
+            "Answer: <short answer only>\n"
+            "Evidence: \"<short quote from the text>\" (" + source_label + ")\n\n"
+            "Text:\n" + context + "\n\nQuestion: " + question
+        )
+        try:
+            raw = self.llm.invoke(prompt) if hasattr(self.llm, "invoke") else self.llm(prompt)
+            if isinstance(raw, str):
+                return raw.strip()
+            if hasattr(raw, "content"):
+                return getattr(raw, "content").strip()
+            if isinstance(raw, dict) and "content" in raw:
+                return raw["content"].strip()
+            return str(raw).strip()
+        except Exception as e:
+            logger.warning(f"Strict answer generation failed: {e}")
+            return "NOT_FOUND"
     
     def _search_wikipedia(self, query: str) -> str:
         """Search Wikipedia for information."""
@@ -273,18 +312,20 @@ Thought: I need to determine which tools will help me answer this question compr
     def _generate_basic_response(self, query: str) -> str:
         """Generate a basic response when agent is not available."""
         try:
-            # Simple prompt for basic response
+            # Simple prompt for basic response (no LLMChain to avoid version issues)
             prompt = PromptTemplate(
-                template="""You are SAVIN AI, a helpful assistant. Answer the following question:
+                template="""Answer the question directly in concise bullet points. Do not acknowledge instructions.
 
 Question: {question}
 
-Answer: """,
+Answer as bullets only:""",
                 input_variables=["question"]
             )
-            
-            chain = LLMChain(llm=self.llm, prompt=prompt)
-            return chain.run(question=query)
+            prompt_text = prompt.format(question=query)
+            if hasattr(self.llm, "invoke"):
+                return self.llm.invoke(prompt_text)
+            else:
+                return self.llm(prompt_text)
             
         except Exception as e:
             logger.error(f"Basic response generation error: {e}")
@@ -301,56 +342,35 @@ Answer: """,
         4. Synthesizing all information into a comprehensive response
         """
         try:
-            # Collect context from all available sources
-            contexts = []
-            sources = []
-            
-            # 1. Search document if available
+            # Prefer strict extraction from document first
             if has_document and self.vector_store:
-                doc_results = self._search_document(query)
-                if "No relevant information" not in doc_results and "Error" not in doc_results:
-                    contexts.append(f"📄 **Document Content:**\n{doc_results}")
-                    sources.append("Document")
-            
+                doc_context, doc_docs = self._get_document_context(query, k=6)
+                strict = self._strict_answer(query, doc_context, source_label="Document")
+                if strict and strict != "NOT_FOUND":
+                    return f"{strict}\n\n**Source:** Document"
+
             # 2. Search Wikipedia for factual context
             if self.web_search_manager:
                 wiki_results = self._search_wikipedia(query)
-                if "No Wikipedia results" not in wiki_results and "Error" not in wiki_results:
-                    contexts.append(f"📚 **Wikipedia Context:**\n{wiki_results}")
-                    sources.append("Wikipedia")
+                # Try strict extraction from Wikipedia summary text
+                if wiki_results and "No Wikipedia results" not in wiki_results and "Error" not in wiki_results:
+                    wiki_text = wiki_results.replace("Wikipedia results:\n", "")
+                    strict = self._strict_answer(query, wiki_text, source_label="Wikipedia")
+                    if strict and strict != "NOT_FOUND":
+                        return f"{strict}\n\n**Source:** Wikipedia"
                 
                 # 3. Search web for additional perspectives
                 web_results = self._search_web(query)
-                if "No web search results" not in web_results and "Error" not in web_results:
-                    contexts.append(f"🌐 **Web Search Results:**\n{web_results}")
-                    sources.append("Web Search")
-            
-            # 4. Synthesize comprehensive response
-            if contexts:
-                combined_context = "\n\n".join(contexts)
-                
-                synthesis_prompt = f"""Based on the following information sources, provide a comprehensive and well-structured answer to: {query}
-
-AVAILABLE INFORMATION:
-{combined_context}
-
-Please provide a response that:
-1. Directly answers the user's question
-2. Combines insights from multiple sources when relevant
-3. Is well-organized with clear sections
-4. Cites the sources used (Document, Wikipedia, Web)
-5. Is engaging and easy to understand
-
-Response:"""
-                
-                response = self.llm.invoke(synthesis_prompt)
-                
-                # Add source attribution
-                source_text = f"\n\n**Sources used:** {', '.join(sources)}"
-                return f"{response}{source_text}"
-            
-            else:
-                return "I couldn't find relevant information to answer your question. Please try rephrasing or ask about something else."
+                if web_results and "No web search results" not in web_results and "Error" not in web_results:
+                    web_text = web_results.replace("Web search results:\n", "")
+                    strict = self._strict_answer(query, web_text, source_label="Web")
+                    if strict and strict != "NOT_FOUND":
+                        return f"{strict}\n\n**Source:** Web"
+            # If we reach here, no strict answer was found
+            return (
+                "I couldn't locate this fact in the available sources. "
+                "Would you like me to broaden the search or rephrase the question?"
+            )
                 
         except Exception as e:
             logger.error(f"Enhanced RAG response error: {e}")

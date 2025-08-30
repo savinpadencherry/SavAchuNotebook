@@ -18,7 +18,7 @@ try:
 except ImportError:
     # Default config if file not found
     class config:
-        AI_MODEL = "gemma3:270m"
+        AI_MODEL = "qwen2.5:0.5b-instruct"
         AI_TEMPERATURE = 0.1
         AI_MAX_TOKENS = 300
         CHUNK_SIZE = 500

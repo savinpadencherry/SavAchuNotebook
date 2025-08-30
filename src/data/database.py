@@ -56,6 +56,7 @@ class ChatDatabase:
         try:
             with self._get_connection() as conn:
                 self._create_tables(conn)
+                self._migrate_schema(conn)
                 logger.info(f"Database initialized at {self.db_path}")
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
@@ -81,6 +82,8 @@ class ChatDatabase:
     def _create_tables(self, conn: sqlite3.Connection):
         """Create all required database tables"""
         cursor = conn.cursor()
+        # Ensure foreign keys are enforced
+        cursor.execute('PRAGMA foreign_keys = ON;')
         
         # Chats table
         cursor.execute('''
@@ -141,6 +144,48 @@ class ChatDatabase:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_chats_updated ON chats(updated_at DESC)')
         
+        conn.commit()
+
+    def _migrate_schema(self, conn: sqlite3.Connection):
+        """Apply lightweight schema migrations for existing databases"""
+        cursor = conn.cursor()
+
+        def _table_columns(table: str) -> List[str]:
+            cursor.execute(f"PRAGMA table_info({table})")
+            return [row[1] for row in cursor.fetchall()]
+
+        # Migrate documents table: add file_name, file_type, file_size, upload_timestamp if missing
+        try:
+            doc_cols = _table_columns('documents')
+            if 'file_name' not in doc_cols:
+                cursor.execute('ALTER TABLE documents ADD COLUMN file_name TEXT')
+            if 'file_type' not in doc_cols:
+                cursor.execute('ALTER TABLE documents ADD COLUMN file_type TEXT')
+            if 'file_size' not in doc_cols:
+                cursor.execute('ALTER TABLE documents ADD COLUMN file_size INTEGER')
+            if 'upload_timestamp' not in doc_cols:
+                cursor.execute('ALTER TABLE documents ADD COLUMN upload_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+        except sqlite3.Error as e:
+            logger.warning(f"Documents table migration warning: {e}")
+
+        # Migrate chats table: add document fields and status flags if missing
+        try:
+            chat_cols = _table_columns('chats')
+            if 'document_name' not in chat_cols:
+                cursor.execute('ALTER TABLE chats ADD COLUMN document_name TEXT')
+            if 'document_type' not in chat_cols:
+                cursor.execute('ALTER TABLE chats ADD COLUMN document_type TEXT')
+            if 'document_size' not in chat_cols:
+                cursor.execute('ALTER TABLE chats ADD COLUMN document_size INTEGER')
+            if 'total_chunks' not in chat_cols:
+                cursor.execute('ALTER TABLE chats ADD COLUMN total_chunks INTEGER DEFAULT 0')
+            if 'is_processed' not in chat_cols:
+                cursor.execute('ALTER TABLE chats ADD COLUMN is_processed BOOLEAN DEFAULT FALSE')
+            if 'updated_at' not in chat_cols:
+                cursor.execute('ALTER TABLE chats ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+        except sqlite3.Error as e:
+            logger.warning(f"Chats table migration warning: {e}")
+
         conn.commit()
 
 
@@ -282,15 +327,36 @@ class DocumentRepository:
                           file_name: Optional[str] = None, file_type: Optional[str] = None,
                           file_size: Optional[int] = None):
         """Save document text and processed chunks"""
-        with self.db._get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT OR REPLACE INTO documents 
-                (chat_id, original_text, processed_chunks, file_name, file_type, file_size)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (chat_id, original_text, json.dumps(processed_chunks), 
-                 file_name, file_type, file_size))
-            conn.commit()
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT OR REPLACE INTO documents 
+                    (chat_id, original_text, processed_chunks, file_name, file_type, file_size)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (chat_id, original_text, json.dumps(processed_chunks), 
+                     file_name, file_type, file_size))
+                conn.commit()
+        except DatabaseError as e:
+            # Auto-migrate and retry if columns are missing
+            if 'no column named' in str(e).lower():
+                try:
+                    # Ensure schema and migrations are applied
+                    self.db._ensure_database_exists()
+                    with self.db._get_connection() as conn:
+                        cursor = conn.cursor()
+                        cursor.execute('''
+                            INSERT OR REPLACE INTO documents 
+                            (chat_id, original_text, processed_chunks, file_name, file_type, file_size)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ''', (chat_id, original_text, json.dumps(processed_chunks), 
+                             file_name, file_type, file_size))
+                        conn.commit()
+                except Exception:
+                    # Re-raise original error if retry fails
+                    raise e
+            else:
+                raise
     
     def get_document_data(self, chat_id: str) -> Optional[Dict[str, Any]]:
         """Get document data for a chat"""
@@ -330,11 +396,9 @@ class VectorStoreRepository:
     def save_vector_store(self, chat_id: str, vector_store: Any, chunks: List[str], 
                          metadata: List[Dict[str, Any]]):
         """Save vector store data"""
-        try:
-            vector_data = pickle.dumps(vector_store.serialize_to_bytes())
-        except Exception as e:
-            logger.error(f"Failed to serialize vector store: {e}")
-            raise DatabaseError(f"Vector store serialization failed: {e}")
+        # Chroma doesn't expose serialize_to_bytes in our version.
+        # Persist only chunks and metadata; store vector_data as NULL placeholder.
+        vector_data = None
         
         with self.db._get_connection() as conn:
             cursor = conn.cursor()
@@ -370,13 +434,15 @@ class VectorStoreRepository:
                 return None
             
             try:
-                vector_data = pickle.loads(row['vector_data'])
                 chunks = json.loads(row['chunks_data'])
                 metadata = json.loads(row['metadata_data'])
-                
-                return vector_data, chunks, metadata
+                # Reconstruct a vector store from saved chunks
+                from ..core.vector_store import create_vector_store_manager
+                vsm = create_vector_store_manager()
+                vector_store = vsm.create_vector_store(chunks, metadatas=metadata)
+                return vector_store, chunks, metadata
             except Exception as e:
-                logger.error(f"Failed to deserialize vector store: {e}")
+                logger.error(f"Failed to reconstruct vector store: {e}")
                 return None
     
     def delete_vector_store(self, chat_id: str) -> bool:

@@ -4,25 +4,17 @@ Handles document embedding, vector storage, and similarity search.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain.schema import Document
+from typing import List, Dict, Any, Optional, Tuple
 import pickle
 import os
-
-from src.config.settings import AIConfig
-
 import tempfile
-import os
-import logging
-from typing import List, Dict, Any, Optional, Tuple
-from langchain_community.embeddings import HuggingFaceEmbeddings
+
 from langchain_community.vectorstores import Chroma
 
 from ..config.settings import AIConfig
 from .exceptions import VectorStoreError
 from ..utils.performance import get_cached_embeddings_model
+from .ollama_embeddings import OllamaEmbeddingsLocal
 
 
 # Configure logging
@@ -39,7 +31,7 @@ class VectorStoreManager:
         self.config = AIConfig()
         self.embeddings = self._get_cached_embeddings()
     
-    def _get_cached_embeddings(self) -> HuggingFaceEmbeddings:
+    def _get_cached_embeddings(self) -> Any:
         """Get cached embeddings model for better performance"""
         try:
             # Use cached embeddings model
@@ -50,22 +42,11 @@ class VectorStoreManager:
             logger.warning(f"Failed to get cached embeddings, creating new instance: {e}")
             return self._create_embeddings()
     
-    def _create_embeddings(self) -> HuggingFaceEmbeddings:
-        """Create optimized HuggingFace embeddings model (fallback)"""
+    def _create_embeddings(self) -> Any:
+        """Create optimized Ollama embeddings model (fallback)"""
         try:
-            embeddings = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-L6-v2",
-                model_kwargs={
-                    'device': 'cpu',
-                    'trust_remote_code': False
-                },
-                encode_kwargs={
-                    'normalize_embeddings': True,
-                    'batch_size': self.config.BATCH_SIZE
-                }
-            )
-            
-            logger.info("Created HuggingFace embeddings model")
+            embeddings = OllamaEmbeddingsLocal(model="all-minilm:22m")
+            logger.info("Created Ollama embeddings model (all-minilm:22m)")
             return embeddings
             
         except Exception as e:
@@ -272,7 +253,7 @@ class VectorStoreSerializer:
             raise VectorStoreError(f"Failed to serialize vector store: {str(e)}")
     
     @staticmethod
-    def deserialize_vector_store(data: bytes, embeddings: HuggingFaceEmbeddings) -> Chroma:
+    def deserialize_vector_store(data: bytes, embeddings: Any) -> Chroma:
         """
         Deserialize vector store from bytes.
         
@@ -319,7 +300,7 @@ def get_vector_store(chunks: List[str]) -> Chroma:
     return manager.create_vector_store(chunks)
 
 
-def get_optimized_embeddings() -> HuggingFaceEmbeddings:
+def get_optimized_embeddings() -> Any:
     """Get optimized embeddings model (backward compatibility)"""
     manager = create_vector_store_manager()
     return manager.embeddings

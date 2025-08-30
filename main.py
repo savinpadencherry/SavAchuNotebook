@@ -6,14 +6,27 @@ This is the main entry point for the refactored SAVIN AI application.
 All components are now properly organized into focused modules.
 """
 
-# Apply startup optimizations first
-import startup_optimization
-startup_optimization.suppress_streamlit_warnings()
-
 import streamlit as st
 import logging
 import sys
 import os
+
+# Configure Streamlit page FIRST - must be the first Streamlit command
+st.set_page_config(
+    page_title="SAVIN AI - Document Intelligence",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/savinpadencherry/notebook-ai',
+        'Report a bug': "https://github.com/savinpadencherry/notebook-ai/issues",
+        'About': "# SAVIN AI\nIntelligent Document Chat Assistant powered by Advanced AI"
+    }
+)
+
+# Apply startup optimizations AFTER page config
+import startup_optimization
+startup_optimization.suppress_streamlit_warnings()
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
@@ -85,8 +98,9 @@ class SavinAIApp:
         This method handles:
         - Performance optimizations for better user experience
         - Session state initialization with default values
-        - Page configuration with proper metadata
         - CSS styling and theme loading
+        
+        Note: st.set_page_config() is now called at the top of main.py
         """
         logger.info("🎨 Setting up Streamlit environment...")
         
@@ -98,18 +112,6 @@ class SavinAIApp:
         SessionStateManager.initialize_defaults()
         logger.info("💾 Session state initialized")
         
-        # Configure Streamlit page with proper settings
-        st.set_page_config(
-            page_title=self.app_config.PAGE_TITLE,
-            page_icon=self.app_config.PAGE_ICON,
-            layout=self.app_config.LAYOUT,
-            initial_sidebar_state=self.app_config.INITIAL_SIDEBAR_STATE,
-            menu_items={
-                'Get Help': self.app_config.HELP_URL,
-                'Report a bug': self.app_config.BUG_REPORT_URL,
-                'About': f"# {self.app_config.APP_TITLE}\n{self.app_config.APP_DESCRIPTION}"
-            }
-        )
         logger.info("📱 Streamlit page configuration set")
         
         # Load CSS styles for enhanced UI appearance
@@ -261,7 +263,7 @@ def main():
         
         3. **Install AI Model:**
            ```bash
-           ollama pull gemma3:270m
+           ollama pull qwen2.5:0.5b-instruct
            ```
         
         4. **Check Logs:**

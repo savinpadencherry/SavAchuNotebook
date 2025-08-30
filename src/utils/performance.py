@@ -39,15 +39,11 @@ class PerformanceCache:
                 warnings.filterwarnings('ignore', category=FutureWarning)
                 warnings.filterwarnings('ignore', message='.*deprecated.*')
                 
-                from langchain_community.embeddings import HuggingFaceEmbeddings
+                from src.core.ollama_embeddings import OllamaEmbeddingsLocal
                 from src.config.settings import AIConfig
-                
-                self._embeddings_model = HuggingFaceEmbeddings(
-                    model_name="sentence-transformers/all-MiniLM-L6-v2",
-                    model_kwargs={'device': 'cpu'},
-                    encode_kwargs={'normalize_embeddings': False}
-                )
-                logger.info("Embeddings model loaded and cached")
+                # Optionally respect OLLAMA_HOST if set; enable parallel embedding
+                self._embeddings_model = OllamaEmbeddingsLocal(model="all-minilm:22m", max_workers=AIConfig.NUM_THREADS)
+                logger.info("Ollama embeddings (all-minilm:22m) loaded and cached")
         return self._embeddings_model
     
     def get_llm_model(self):
@@ -61,10 +57,10 @@ class PerformanceCache:
                 from langchain_community.llms import Ollama
                 from src.config.settings import AIConfig
                 
+                # Keep to parameters supported by our langchain-community version
                 self._llm_model = Ollama(
                     model=AIConfig.AI_MODEL,
                     temperature=AIConfig.AI_TEMPERATURE,
-                    num_predict=AIConfig.AI_MAX_TOKENS,
                 )
                 logger.info(f"LLM model {AIConfig.AI_MODEL} loaded and cached")
         return self._llm_model

@@ -11,7 +11,7 @@ langchain-community==0.0.1
 
 # Vector storage and embeddings
 faiss-cpu
-sentence-transformers==2.2.2
+chromadb>=0.4.6
 
 # AI/LLM support
 ollama==0.1.7

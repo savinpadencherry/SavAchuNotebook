@@ -2,7 +2,7 @@
 # Customize these settings to personalize your experience
 
 # AI Model Settings - Optimized for structured responses
-AI_MODEL = "gemma3:270m"  # Lightweight but capable model
+AI_MODEL = "qwen2.5:0.5b-instruct"  # Lightweight but capable model
 AI_TEMPERATURE = 0.2    # Balanced creativity for structured responses
 AI_MAX_TOKENS = 1024    # Longer responses for comprehensive answers
 

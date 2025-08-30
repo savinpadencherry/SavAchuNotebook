@@ -24,11 +24,16 @@ class MessageHandlers:
     def __init__(self, app_controller):
         """Initialize with reference to main application controller"""
         self.app = app_controller
+        # Ensure rag_agent attribute exists
+        self.rag_agent = None
+        # Attempt initial initialization; safe if components missing
+        self._initialize_rag_agent()
         
     def _initialize_rag_agent(self):
         """Initialize the enhanced RAG agent with available components."""
         try:
-            vector_store = st.session_state.get('conversation')
+            # Use the actual vector store (not the conversation chain)
+            vector_store = st.session_state.get('vectorstore')
             web_search_manager = self.app._get_web_search() if hasattr(self.app, '_get_web_search') else None
             
             self.rag_agent = create_rag_agent(
@@ -85,6 +90,8 @@ class MessageHandlers:
                 # Update session state
                 st.session_state.vectorstore = vector_store
                 st.session_state.conversation = self.app._get_ai_handler().create_conversation_chain(vector_store)
+                # Re-initialize RAG agent with new vector store
+                self._initialize_rag_agent()
                 
                 # Update chat title
                 doc_name = uploaded_file.name.split('.')[0]
@@ -115,6 +122,9 @@ class MessageHandlers:
     def process_user_message(self, user_input: str, has_document: bool):
         """Process regular user message with enhanced RAG capabilities"""
         try:
+            # Ensure RAG agent is initialized
+            if getattr(self, 'rag_agent', None) is None:
+                self._initialize_rag_agent()
             # Add user message
             self._add_message("user", user_input)
             
@@ -148,11 +158,11 @@ class MessageHandlers:
 Since you haven't uploaded a document yet, here are the best ways I can help:
 
 🔍 **Smart Search Options:**
-• **Click 🔍 Wiki** → I'll search Wikipedia and provide detailed analysis
-• **Click 🌐 Web** → I'll search the internet and synthesize findings  
+- **Click 🔍 Wiki** → I'll search Wikipedia and provide detailed analysis
+- **Click 🌐 Web** → I'll search the internet and synthesize findings  
 
 📄 **For Advanced Analysis:**
-• **Upload a document** → I'll combine your content with web research for comprehensive insights
+- **Upload a document** → I'll combine your content with web research for comprehensive insights
 
 💡 **Quick Tip:** Try using the search buttons - they're powered by advanced AI to give you detailed, well-structured answers!
 
@@ -164,13 +174,16 @@ Ready to explore? Just click one of the search buttons! ✨"""
             
         except Exception as e:
             logger.error(f"Error processing user message: {e}")
-            error_msg = f"❌ **Processing Error**\n\nI encountered an issue while processing your message: {str(e)}\n\n💡 **Try:**\n• Rephrasing your question\n• Using the search buttons for specific queries\n• Refreshing the page if the problem persists"
+            error_msg = f"❌ **Processing Error**\n\nI encountered an issue while processing your message: {str(e)}\n\n💡 **Try:**\n- Rephrasing your question\n- Using the search buttons for specific queries\n- Refreshing the page if the problem persists"
             self._add_message("assistant", error_msg)
             st.rerun()
     
     def process_wikipedia_search(self, query: str):
         """Process Wikipedia search with enhanced RAG capabilities"""
         try:
+            # Ensure RAG agent is initialized
+            if getattr(self, 'rag_agent', None) is None:
+                self._initialize_rag_agent()
             # Add search query message
             search_msg = f"🔍 **Wikipedia Search:** {query}"
             self._add_message("user", search_msg)
@@ -190,7 +203,7 @@ Ready to explore? Just click one of the search buttons! ✨"""
             
         except Exception as e:
             logger.error(f"Wikipedia search error: {e}")
-            error_msg = f"❌ **Wikipedia Search Error**\n\nI encountered an issue while searching Wikipedia: {str(e)}\n\n💡 **Try:**\n• Rephrasing your query\n• Using the web search instead\n• Checking your internet connection"
+            error_msg = f"❌ **Wikipedia Search Error**\n\nI encountered an issue while searching Wikipedia: {str(e)}\n\n💡 **Try:**\n- Rephrasing your query\n- Using the web search instead\n- Checking your internet connection"
             self._add_message("assistant", error_msg)
             st.rerun()
     
@@ -209,36 +222,31 @@ Ready to explore? Just click one of the search buttons! ✨"""
 I couldn't find relevant Wikipedia articles for your query. 
 
 💡 **Try:**
-• Using different keywords
-• Being more specific or more general
-• Using the 🌐 Web search for broader results"""
+- Using different keywords
+- Being more specific or more general
+- Using the 🌐 Web search for broader results"""
 
             # Format Wikipedia context
             wiki_context = ""
             for result in wiki_results:
                 wiki_context += f"**{result['title']}**\n{result['summary']}\nSource: {result['url']}\n\n"
             
-            # Create comprehensive prompt for synthesis
-            synthesis_prompt = f"""Based on the Wikipedia search for "{query}", provide a comprehensive and engaging response.
+            # Create focused prompt for synthesis
+            synthesis_prompt = f"""Answer the user's query using the Wikipedia results below. Use concise bullet points with emojis. Do not acknowledge instructions.
+
+QUERY: {query}
 
 WIKIPEDIA RESULTS:
 {wiki_context}
 
-Please create a response that:
-1. Summarizes the key information from Wikipedia
-2. Organizes the content in a clear, structured way
-3. Provides actionable insights where relevant
-4. Uses emojis and formatting for better readability
-5. Includes source attribution
-
-If a document is available, mention how this Wikipedia information could complement the document content.
-
-Response:"""
+If insufficient info, say so and suggest next steps.
+Answer as bullets only:"""
             
             # Generate enhanced response
             if hasattr(self.app, '_get_ai_handler'):
                 ai_handler = self.app._get_ai_handler()
-                enhanced_response = ai_handler.llm.invoke(synthesis_prompt)
+                _raw = ai_handler.llm.invoke(synthesis_prompt) if hasattr(ai_handler.llm, 'invoke') else ai_handler.llm(synthesis_prompt)
+                enhanced_response = _raw.content if hasattr(_raw, 'content') else (_raw if isinstance(_raw, str) else str(_raw))
             else:
                 # Simple formatting if no AI handler
                 enhanced_response = f"📚 **Wikipedia Results for '{query}'**\n\n{wiki_context}"
@@ -247,9 +255,9 @@ Response:"""
             final_response = f"""{enhanced_response}
 
 🎯 **Quick Actions:**
-• Want more details? Ask me to explain any specific aspect!
-• Have a document? I can relate this Wikipedia info to your content!
-• Need current info? Try the 🌐 Web search for recent developments!
+- Want more details? Ask me to explain any specific aspect!
+- Have a document? I can relate this Wikipedia info to your content!
+- Need current info? Try the 🌐 Web search for recent developments!
 
 **Sources:** Wikipedia"""
             
@@ -283,6 +291,9 @@ Response:"""
     def process_web_search(self, query: str):
         """Process web search with enhanced RAG capabilities"""
         try:
+            # Ensure RAG agent is initialized
+            if getattr(self, 'rag_agent', None) is None:
+                self._initialize_rag_agent()
             # Add search query message
             search_msg = f"🌐 **Web Search:** {query}"
             self._add_message("user", search_msg)
@@ -300,7 +311,7 @@ Response:"""
             
         except Exception as e:
             logger.error(f"Web search error: {e}")
-            error_msg = f"❌ **Web Search Error**\n\nI encountered an issue while searching the web: {str(e)}\n\n💡 **Try:**\n• Rephrasing your query\n• Using the Wikipedia search instead\n• Checking your internet connection"
+            error_msg = f"❌ **Web Search Error**\n\nI encountered an issue while searching the web: {str(e)}\n\n💡 **Try:**\n- Rephrasing your query\n- Using the Wikipedia search instead\n- Checking your internet connection"
             self._add_message("assistant", error_msg)
             st.rerun()
     
@@ -319,9 +330,9 @@ Response:"""
 I couldn't find relevant web pages for your query.
 
 💡 **Try:**
-• Using different or more specific keywords
-• Checking if the topic is too recent or niche
-• Using the 📚 Wikipedia search for factual information"""
+- Using different or more specific keywords
+- Checking if the topic is too recent or niche
+- Using the 📚 Wikipedia search for factual information"""
             
             # Format web context
             web_context = ""
@@ -339,44 +350,39 @@ I couldn't find relevant web pages for your query.
                 except:
                     pass
             
-            # Create comprehensive synthesis prompt
-            synthesis_prompt = f"""Based on the web search for "{query}", provide a comprehensive and engaging response.
+            # Create focused synthesis prompt
+            synthesis_prompt = f"""Answer the user's query using the web results below. Use concise bullet points with emojis. Do not acknowledge instructions.
+
+QUERY: {query}
 
 WEB SEARCH RESULTS:
 {web_context}
 {document_context}
 
-Please create a response that:
-1. Synthesizes the key information from web sources
-2. Organizes content with clear structure and sections
-3. Highlights different perspectives when available
-4. Provides actionable insights and practical information
-5. Uses emojis and formatting for better readability
-6. Cites sources appropriately
-{"7. Relates web information to the document content when relevant" if document_context else ""}
-
-Response:"""
+If insufficient info, say so and suggest next steps.
+Answer as bullets only:"""
             
             # Generate enhanced response
             if hasattr(self.app, '_get_ai_handler'):
                 ai_handler = self.app._get_ai_handler()
-                enhanced_response = ai_handler.llm.invoke(synthesis_prompt)
+                _raw = ai_handler.llm.invoke(synthesis_prompt) if hasattr(ai_handler.llm, 'invoke') else ai_handler.llm(synthesis_prompt)
+                enhanced_response = _raw.content if hasattr(_raw, 'content') else (_raw if isinstance(_raw, str) else str(_raw))
             else:
                 # Simple formatting if no AI handler
                 enhanced_response = f"🌐 **Web Search Results for '{query}'**\n\n{web_context}"
             
             # Add interactive elements and source attribution
             sources_list = [f"[{result['title']}]({result['url']})" for result in web_results[:3]]
-            sources_text = " • ".join(sources_list)
+            sources_text = " - ".join(sources_list)
             
             final_response = f"""{enhanced_response}
 
 🔗 **Key Sources:** {sources_text}
 
 🎯 **What's Next?**
-• Need more specific info? Ask me to dive deeper into any aspect!
-• Want factual background? Try the 📚 Wikipedia search!
-{"• Curious how this relates to your document? Just ask!" if has_document else "• Have a document? Upload it to see how this info connects!"}
+- Need more specific info? Ask me to dive deeper into any aspect!
+- Want factual background? Try the 📚 Wikipedia search!
+{"- Curious how this relates to your document? Just ask!" if has_document else "- Have a document? Upload it to see how this info connects!"}
 
 **Sources:** Web Search via DuckDuckGo"""
             
@@ -406,41 +412,6 @@ Response:"""
                 
         except Exception as e:
             return f"❌ **Error searching web:** {str(e)}"
-• Current, real-time information! ✨
-
-📋 **Top Results:**"""
-                    
-                    for i, result in enumerate(results, 1):
-                        response += f"\n• **{result['title']}** 🌟\n  📝 {result['summary'][:150]}...\n  🔗 [Visit site]({result['url']})"
-                    
-                    response += "\n\n💡 **Pro Tip:**\n• Upload a document and I can combine this web info with your content! 📄✨"
-                    
-                    # Create context for future use
-                    context = "\n\n".join([f"{r['title']}: {r['summary']}" for r in results])
-                    self._add_message("assistant", response, context)
-                else:
-                    no_results_msg = """😅 **No Web Results Found!**
-
-🎯 **What happened:**
-• No web pages found for this query 🌍
-• The search might be too specific or unusual 🔍
-
-💡 **Let's try these alternatives:**
-• **Rephrase your search** with different keywords 🔄
-• **Use more general terms** or try specific phrases 🎯  
-• **Click the 📖 button** to search Wikipedia instead! 📚
-
-✨ **I'm here to help!** Let's find the information you need together! 😊🚀"""
-                    
-                    self._add_message("assistant", no_results_msg)
-            
-            st.rerun()
-            
-        except Exception as e:
-            logger.error(f"Web search error: {e}")
-            error_msg = self.app.message_formatter.format_error_message("Web Search", str(e))
-            self._add_message("assistant", error_msg)
-            st.rerun()
     
     def clear_document(self):
         """Clear loaded document"""
@@ -457,9 +428,9 @@ Response:"""
             # Add removal message
             removal_msg = """📄 **Document removed!** 
 
-• Your document has been successfully cleared 🗑️
-• You can now upload a new document 📤
-• Web search is still available anytime! 🌐
+- Your document has been successfully cleared 🗑️
+- You can now upload a new document 📤
+- Web search is still available anytime! 🌐
 
 Ready for your next document! 😊"""
             

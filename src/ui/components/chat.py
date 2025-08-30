@@ -22,11 +22,11 @@ class ChatInterface:
         
         Args:
             messages: List of message dictionaries
-            height: Container height in pixels
+            height: Container height in pixels (for compatibility, but not used in Streamlit 1.28.1)
         """
-        container_height = height or self.config.MAX_CHAT_HEIGHT
-        
-        chat_container = st.container(height=container_height, border=True)
+        # Note: height parameter not supported in Streamlit 1.28.1
+        # 'border' kwarg was added in newer Streamlit versions; avoid for compatibility
+        chat_container = st.container()
         
         with chat_container:
             if messages:
@@ -221,7 +221,7 @@ class ProcessingStatus:
     """
     
     @staticmethod
-    def show_processing(message: str = "Processing...", progress: Optional[float] = None) -> st.status:
+    def show_processing(message: str = "Processing...", progress: Optional[float] = None):
         """
         Show processing status with optional progress.
         
